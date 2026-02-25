@@ -1,0 +1,197 @@
+\documentclass[conference]{IEEEtran}
+\IEEEoverridecommandlockouts
+% The preceding line is only needed to identify funding in the first footnote. If that is unneeded, please comment it out.
+%Template version as of 6/27/2024
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{fontspec}
+\setmainfont{Times New Roman}
+\usepackage[inline]{enumitem}
+\usepackage[skip,indent]{parskip}
+
+\usepackage{cite}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{algorithmic}
+\usepackage{algorithm}
+\usepackage{graphicx}
+\usepackage{textcomp}
+\usepackage{xcolor}
+\def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08em
+    T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
+
+\begin{document}
+
+\title{Package Assignment and Routing System}
+
+\author{
+    \IEEEauthorblockN{Lakshay Bansal}
+    \IEEEauthorblockA{
+        \textit{Department of Computer Science} \\
+        \textit{University at Albany, SUNY} \\
+        Albany, US \\
+        lbansal@albany.edu
+    }\and
+    \IEEEauthorblockN{Mathew Robotham}
+    \IEEEauthorblockA{
+        \textit{Department of Computer Science} \\
+        \textit{University at Albany, SUNY} \\
+        Albany, US \\
+        mrobotham@albany.edu
+    }\and
+    \IEEEauthorblockN{Young Shin}
+    \IEEEauthorblockA{
+        \textit{Department of Computer Science} \\
+        \textit{University at Albany, SUNY} \\
+        Albany, US \\
+        yshin5@albany.edu
+    }
+}
+
+\maketitle
+
+\begin{abstract}
+    The modern logistics and transportation systems face their primary challenge through the need to establish effective delivery routing methods. Businesses need to deliver packages to different locations while they work to decrease their travel distance and fuel usage and their time needed for deliveries. The research investigates the Vehicle Routing Problem (VRP) which builds upon the Traveling Salesman Problem (TSP) through its need to operate multiple delivery vehicles at different locations while following specific operational rules.
+
+    We propose creating an algorithmic routing systems using both classical and modern artificial intelligence methods and techniques through which we will assign packages to delivery trucks and establish delivery routes that represent a city as a weighted graph. We will then evaluate their overall performance with each other with the objective being to minimize the total distance travel while satisfying constraints such as truck capacity and delivery priorities.
+\end{abstract}
+
+\begin{IEEEkeywords}
+    artificial intelligence, traveling salesman problem, vehicle routing problem, route optimization, logistics optimization, nearest-neighbor algorithm, reinforcement learning, gymnasium.
+\end{IEEEkeywords}
+
+\section{Proposal}
+
+\subsection{Introduction}
+
+The growing popularity of online shopping together with instant delivery services has created a greater need for effective transportation and logistics operations. Amazon and FedEx and UPS must find ways to transport numerous packages each day while controlling their operational expenses and fuel usage and delivery speed. Companies need effective route planning solutions because it helps them achieve their business goals while satisfying customer needs.
+
+The vehicle routing problem (VRP) is a critical optimization problem that logistics operations must solve. The VRP problem extends the traveling salesman problem (TSP) by requiring multiple vehicles to deliver shipments among multiple locations while following specific operational rules for vehicle capacity and route restrictions and delivery assessments. It can be thought of as a multi-agent version of the traveling salesman problem (TSP). To improve intuitiveness, we will model this as a problem of delivering packages to address where agents are delivery trucks that must traverse a city. The guiding problem is, given some number of packages and some number of delivery trucks, identify an efficient routing for these trucks that minimizes the total distance traveled by all trucks combined.
+
+The VRP is classified as an NP-hard problem. As such, the development of near-optimal solutions involves the implementation of heuristic and metaheuristic techniques because they offer effective solution methods in a reasonable amount of time. Overall, this problem is very much important as it underpins the real-world nature of any logistical operation. While we're using package delivery for this, also consider pickers or stockers in a warehouse; or the reverse, school bus routing, and waste pickup.
+
+This project develops a package assignment and routing system that uses city modeling to create a weighted graph which shows delivery locations as nodes and distance between locations as edges. Our project objectives are to compare algorithmic pathing and a reinforcement learning AI.
+
+Routing systems that work efficiently not only enhance logistics efficiency but also help the environment by decreasing both fuel usage and greenhouse gas emissions. The delivery networks are becoming bigger as time goes on.
+
+\subsection{Related work}
+
+The nearest-neighbor method serves as a common greedy heuristic which helps establish base routes for new projects. The methods enable quick computations; however, they result in suboptimal outcomes because they depend on making local choices instead of pursuing overall system optimization \cite{Golden2008}.
+
+The Clarke--Wright Savings Algorithm \cite{ClarkeWright1964} stands as one of the most significant early heuristics. The method establishes delivery routes by merging existing routes which results in reduced travel distances through calculated distance savings. The system remains popular for medium-sized routing problems because it achieves high performance through straightforward operational procedures.
+
+Machine learning methods can discover their own heuristics and apply them to many different problems. \cite{bello2017neuralcombinatorialoptimizationreinforcement} discusses neural combinatorial optimization (NCO) which is a framework for tackling combinatorial optimization problems using reinforcement learning and neural networks. They use a pointer network architecture which consists of two RNN modules along with a policy gradient. Here reinforcement learning is ideal because combinatorial optimization problems have simple reward mechanisms.
+
+In experimentation, reinforcement learning pre-training was conducted. This is different from showing the AI thousands of perfect, optimal routes which would have to be calculated with expensive solvers. This particular model is able to obtain results using either a greedy, sampling, or active search approach. Greedy picks the city it thinks is best at every sine step, however this leads to shortsightedness in the AI's decision-making. Sampling involves the model generating many different tours and picking the shortest one. Active search is the most powerful method whereby each time the model is given a new problem; it attempts to learn and fine-tune its parameters specifically for that one map. These methods were compared against baselines like Christofides algorithm and supervised learning, and the RL approach was significantly better at creating shorter tours.
+
+All-in-all this reinforcement learning approach works well, beating many traditional algorithms, and scales well while still maintaining an answer close to the optimal solution. On the other hand, algorithms like Concorde are still more accurate and faster. However, from a wider perspective such an RL approach has value as it can be applied to many other similar problems, not just that of a TSP, which very efficient algorithms specifically designed for TSP cannot achieve.
+
+The field has progressed, but it still faces difficulties because researchers must balance three essential elements which include solution quality and computational efficiency and real-world operational requirements. This project builds upon prior work by implementing and comparing baseline heuristics and optimization methods to evaluate their effectiveness in minimizing delivery distance and improving routing efficiency.
+
+\subsection{Datasets}
+
+The project develops its delivery system through the creation of a simulated delivery dataset which serves as its main data source. We use synthetic data creation to evaluate our routing algorithms through both controlled testing and actual delivery scenario simulations. For the purposes of this paper, we will assume all graphs are connected, meaning there always exists some path from every node to every other node; and undirected, meaning a truck can travel both ways down a road.
+
+The road network is represented by an undirected, weighted graph where nodes indicate intersections or destinations, edges indicate the existence of a road between two nodes, and edge weights represent the distance between two nodes.
+
+Delivery locations exist as points that appear on a two-dimensional grid system, represented as $(x,y)$ coordinates. These represent customer delivery addresses.
+
+The main distribution center, or simple depot, functions as the storage facility for packages starting out and delivery trucks. All trucks begin and finish their routes from this location. The location exists at a specific fixed point.
+
+The Euclidean distance measurement determines all location distances. These measurements are reflected in the graph's edge weights.
+
+All vehicles have a fixed carrying capacity and all vehicles operate from the depot to complete their missions.
+
+\subsection{Methods and approach}
+
+For implementation, we'll be implementing in Python using modules like PyTorch, networkx, and matplotlib for visualizations.
+
+The problem can be more formally described as so. Given some number of parcels, some number of trucks, and a weighted graph where nodes indicate intersections and/or package destinations, edges indicate a viable path between two nodes, edge weights indicate distance between two nodes, each parcel has a single destination, each truck can only carry a certain number of parcels, and that every truck starts and ends at some node, devise a route for each truck that minimizes the total distance traveled by all trucks.
+
+Due to the computational complexity of solving such a problem, we won't brute force the solution to use as a baseline but rather use well-known classical algorithms to compare off of like the nearest-neighbor heuristic. With this we will attempt to analyze and improve upon these algorithms using various classical AI techniques.
+
+We'll start with solving a single TSP, scaling this up to a VRP through partitioning and ensuring constraint satisfaction. Then we'll move to further optimizations of the algorithm, comparing it to existing iterations as well as addressing the advantages and disadvantages of changes. This will likely take up most of the time available, however, we will look into training an AI to solve such a problem through reinforcement learning and pathfinding.
+
+The nearest-neighbor heuristic serves as the baseline solution to create initial delivery routes. The method requires vehicles to start their routes from the depot and drive to the nearest delivery point which has not yet been visited. The vehicle operates until it reaches its full capacity then it returns to the depot to start processing the upcoming delivery points. The nearest-neighbor method provides a fast computational process which requires simple implementation but it generates inferior routing results because it selects routes through nearby locations without considering total route performance \cite{Golden2008}.
+
+For training the reinforcement learning model, we'll establish that traveling to different areas of the map will cost a certain amount of points. When reaching the goal, the AI will be rewarded with more points. This will encourage the AI to go through paths with the least cost and get to the goal. The points system needs to be well adjusted so that the AI doesn't learn to just stay still.
+
+The training map will start out small so that AI can quickly learn and roam around less before reaching the goal. As the training progresses, a larger map will be implemented.
+
+We will accomplish this by utilizing the code from https://gymnasium.farama.org/. This is a reinforcement learning AI trainer that will have the AI carry out action in an environment and be punished and rewarded accordingly to the actions of the AI.
+
+Later, we can also implement areas with high-cost fluctuations so that the AI learns risk management. Similar to simulating a highway during rush hour and not.
+
+We will create algorithmic search algorithms like A* and the like to compare with the reinforcement learning AI. This algorithmic AI can be the measurement of how well reinforced learning AI has learned to find the path to the delivery site and how optimal the path it found is. This will remove bad luck from the map's path cost naturally worse than another map.
+
+\subsection{Evaluation}
+
+The main metric we'll use to compare against is overall distance traveled by all delivery trucks. For the classical AI algorithm this is simply the sum of all paths produced by each truck. A minimal total distance traveled is desirable.
+
+The performance of the AI will be evaluated by the total amount of points at the end. The points for reinforcement learning AI at the end will be compared to the algorithmic AI. This is to prevent situations where the AI is on a bad map but was punished for being in one when it has no choice over it. The algorithmic AI can be helpful in finding out how close or far reinforcement learning AI is to the algorithmic AI. Comparing the points between the reinforcement learning AI and algorithmic AI, more points for reinforcement learning AI mean better results as this would mean the AI has learned how to path the destinations well.
+
+\subsection{Project plan and timeline}
+
+Here, the weeks are starting from the first proposal submission date.
+
+\begin{itemize}
+    \item Week 2: Finalize the method to solve the problem.
+
+    Lakshay, Mathew, and Young will discuss how to proceed with the implementation of the project in more concrete detail.
+    \item Week 3: Learn how to code the pathing algorithm or the AI tool.
+
+    Lakshay, Mathew will try to learn how to code the selected algorithmic pathing AI. Young will try to learn how to use the gymnasium code to train reinforcement learning AI.
+    \item Week 5: Try to create and train the AI.
+
+    Lakshay, Mathew will try to create the code for the selected algorithmic pathing AI. Young will try to create the gymnasium code to train reinforcement learning AI.
+    \item Week 6: Compare the algorithmic AI and reinforcement learning AI.
+
+    Lakshay, Mathew, and Young will run the developed AIs and compare the performance of the two AIs.
+    \item Week 7: Add more variables like fluctuating path value or more obstacles.
+
+    Lakshay, Mathew, and Young, more complex, fluid maps will be developed to try to make the AI go through less ideal situations like static maps.
+\end{itemize}
+
+\subsection{Expected challenges}
+
+Generating sufficient graphs for testing will be of concern. We aim to be able to generate city-like graphs on the fly and quickly iterate tests on different graphs fast and quickly. However, given the assumptions made before we need to ensure the graph is connected, as we cannot have packages that cannot be delivered. In addition, we want graphs that resemble a real city. For example, there should not be two nodes on far ends of the graph that share an edge. One solution to this is to generate a graph whereby nodes are randomly placed and edges are made based on a progressive probability function. In other words, edge probability decreases as distance between nodes increases. This still does not address disconnected graphs from forming, however we could run an algorithm to determine graph connectedness and either discard the graph's use or remove smaller disconnected graphs.
+
+Turning a traditional TSP into a VRP is difficult due to the existence of multiple agents. We expect to first try to partition up a single TSP, partition its path up and distribute it among multiple delivery trucks ensuring no truck carries too many packages. However, an excess in packages is possible.
+
+The process of creating an effective system for package distribution and route selection contains multiple technical and operational obstacles. The main challenge centers on the Vehicle Routing Problem because it requires complex computations to solve. The NP-hard nature of VRP as a delivery location increases makes it impossible to find exact optimal solutions for this problem. The solution will use heuristic and metaheuristic algorithms which generate solutions that achieve near-optimal results within practical computational limits.
+
+The second challenge requires organizations to manage vehicle capacity restrictions while creating efficient routes. The operation requires route planners to develop truck routes that achieve optimal package distribution while driving short distances between delivery points. The system will use capacity checks to create routes which produce both viable and optimal results.
+
+The system, which needs to function correctly in various delivery situations, presents a difficult challenge for testing its operational reliability. The routing performance gets affected by three factors, which include changes in delivery locations and variations in demand sizes and vehicle capacity. The system requires testing through various simulated scenarios to achieve both robustness and steady performance.
+
+Balancing the reward and punishment for reinforcement learning AI is one of the expected challenges. If the punishment is too strong and the reward is too weak then the AI would learn to stay still as moving around will be too costly. Another is reverse, if the cost is too weak and reward is too high, the AI could learn to ignore the cost of the path and go straight as reaching the reward fast as possible would lead to higher score. The only way to deal with this problem seems to be trying out different point systems and checking if the resulting AI is behaving as desired.
+
+\begin{thebibliography}{00}
+
+    \bibitem{Golden2008}
+    B. Golden, S. Raghavan, and E. Wasil, \textit{The Vehicle Routing Problem: Latest Advances and New Challenges}. New York, NY, USA: Springer, 2008.
+
+    \bibitem{ClarkeWright1964}
+    G. Clarke and J. W. Wright, “Scheduling of vehicles from a central depot to multiple delivery points,” \textit{Operations Research}, vol. 12, no. 4, pp. 568–581, 1964.
+
+    \bibitem{bello2017neuralcombinatorialoptimizationreinforcement}
+    I. Bello, H. Pham, Q. Le, M. Norouzi, S. Bengio, ``Neural Combinatorial Optimization with Reinforcement Learning,'' 2017. [Online] Available: https://arxiv.org/abs/1611.09940
+
+    % \bibitem{Dorigo2004}
+    % M. Dorigo and T. Stützle, \textit{Ant Colony Optimization}. Cambridge, MA, USA: MIT Press, 2004.
+
+    % \bibitem{Goldberg1989}
+    % D. E. Goldberg, \textit{Genetic Algorithms in Search, Optimization, and Machine Learning}. Reading, MA, USA: Addison-Wesley, 1989.
+
+    % \bibitem{Google2024}
+    % Google Developers, “Vehicle Routing Problem,” 2024. [Online]. Available: https://developers.google.com/optimization/routing/vrp. [Accessed: Feb. 19, 2026].
+
+    % \bibitem{Laporte2009}
+    % G. Laporte, “Fifty years of vehicle routing,” \textit{Transportation Science}, vol. 43, no. 4, pp. 408--416, 2009.
+
+    % \bibitem{TothVigo2014}
+    % P. Toth and D. Vigo, \textit{Vehicle Routing: Problems, Methods, and Applications}. Philadelphia, PA, USA: SIAM, 2014.
+
+\end{thebibliography}
+
+\end{document}

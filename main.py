@@ -2,10 +2,10 @@
 
 import math
 import random
-from copy import copy
-from typing import Iterable, Collection
+from typing import Iterable, Any
 import networkx as nx
 import matplotlib.pyplot as plt
+import osmnx as ox
 
 def euclidean_distance(G: nx.Graph, n1, n2) -> float:
     x1, y1 = G.nodes[n1]['pos']
@@ -40,7 +40,7 @@ def generate_city() -> nx.Graph:
     weights = {}
     for u, v in G.edges():
         weights[(u, v)] = euclidean_distance(G, u, v)
-    nx.set_edge_attributes(G, weights, 'weight')
+    nx.set_edge_attributes(G, weights, 'length')
     return G
 
 def generate_grid_city(m: int, n: int) -> nx.Graph:
@@ -63,12 +63,12 @@ def generate_grid_city(m: int, n: int) -> nx.Graph:
     weights = {}
     for u, v in G.edges():
         weights[(u, v)] = euclidean_distance(G, u, v)
-    nx.set_edge_attributes(G, weights, 'weight')
+    nx.set_edge_attributes(G, weights, 'length')
     G.remove_edges_from(random.sample(list(G.edges()), round(.25 * len(G.edges()))))
     G = G.subgraph(max(nx.connected_components(G), key=len)).copy()
     return G
 
-def assign_nodes(G: nx.Graph, max_customers: int=8) -> tuple[int, list[int], list[int]]:
+def assign_nodes(G: nx.Graph, max_customers: int) -> tuple[Any, list[Any], list[Any]]:
     """
     Given a graph, returns a random node for the warehouse, of the remaining
     nodes a list of nodes designated as customers, and a list of unassigned
@@ -81,57 +81,91 @@ def assign_nodes(G: nx.Graph, max_customers: int=8) -> tuple[int, list[int], lis
     remaining_nodes.remove(warehouse)
     customers = random.sample(remaining_nodes, k=min(max_customers, len(remaining_nodes)))
     for customer in customers:
+        nx.set_node_attributes(G, { customer: 'blue' }, 'viz_color')
         remaining_nodes.remove(customer)
     return warehouse, customers, remaining_nodes
 
 
-def tsp_nn_heuristic(G: nx.Graph, src, destinations: Iterable) -> tuple[list, nx.DiGraph]:
+def tsp_nn_heuristic(G: nx.Graph, src, destinations: Iterable) -> list:
     dst = list(destinations)
     current_node = src
     full_path = [src]
-    out_graph = nx.DiGraph(G)
-    out_graph.clear_edges()
+    # out_graph = nx.DiGraph(G)
+    # out_graph.clear_edges()
     while dst:
         next_node, _dist = nearest_neighbor(G, current_node, dst)
         path = nx.astar_path(G, current_node, next_node, lambda u,v:euclidean_distance(G, u, v))
         full_path += path[1::]
         dst.remove(next_node)
         current_node = next_node
-    print(full_path)
-    for i in range(len(full_path) - 1):
-        out_graph.add_edge(full_path[i], full_path[i + 1])
-    return full_path, out_graph
+    # for i in range(len(full_path) - 1):
+    #     out_graph.add_edge(full_path[i], full_path[i + 1])
+    return full_path
+
+def pars(G: nx.Graph, warehouse, customers: list, m: int, k: int) -> list[list[Any]]:
+    if not customers:
+        return []
+
+    routes: list[list[Any]] = []
+
+    path = nx.astar_path(G, warehouse, customers[0], lambda n1,n2:euclidean_distance(G, n1, n2))
+    path.extend(tsp_nn_heuristic(G, customers[0], customers[1::])[1::])
+    path.extend(nx.astar_path(G, path[-1], warehouse, lambda n1,n2:euclidean_distance(G, n1, n2))[1::])
+    routes.append(path)
+
+    return routes
 
 
 def main():
+    MAX_CUSTOMERS = 16
     # G = generate_city()
-    G = generate_grid_city(5, 5)
-    warehouse, customers, remaining_nodes = assign_nodes(G)
+    # G = generate_grid_city(5, 5)
+    _G = ox.graph_from_place('Albany, NY, USA', network_type='drive')
+    G = ox.project_graph(_G)
+    nx.set_node_attributes(G, {node: (G.nodes[node]['x'], G.nodes[node]['y']) for node in G.nodes()}, 'pos')
 
+    warehouse, customers, remaining_nodes = assign_nodes(G, MAX_CUSTOMERS)
     print(f'Warehouse: {warehouse}')
     print(f'Customers: {customers}')
+    routes = pars(G, warehouse, customers, 0, 0)
+    total_distance = 0
+    for route in routes:
+        total_distance += nx.path_weight(G, route, 'length')
+    # print(f'{PLACE}\t{len(customers)}\t{total_distance}')
+    print(f'Total distance traveled: {total_distance}')
 
-    # print(nearest_neighbor(G, warehouse, customers))
-    nn_path, nn_graph = tsp_nn_heuristic(G, warehouse, customers)
-    nn_path_weight = nx.path_weight(G, nn_path, 'weight')
-    print(f'Nearest neighbor distance: {nn_path_weight}')
+    # pos = nx.get_node_attributes(G, 'pos')
 
-    pos = nx.get_node_attributes(G, 'pos')
+    # ox.plot_graph_route(G, route)
 
-    fig, (ax1, ax2) = plt.subplots(1, 2)
-    nx.draw_networkx_nodes(G, pos, [warehouse], node_color='red', ax=ax1)
-    nx.draw_networkx_nodes(G, pos, customers, node_color='blue', ax=ax1)
-    nx.draw_networkx_nodes(G, pos, remaining_nodes, node_color='grey', ax=ax1)
+    node_colors = []
+    for node in G.nodes():
+        if node == warehouse:
+            node_colors.append('yellow')
+        elif node in customers:
+            node_colors.append('blue')
+        else:
+            node_colors.append('lightgrey')
+
+    # fig, (ax1, ax2) = plt.subplots(1, 2)
+    # ox.plot_graph(G)
+    for route in routes:
+        ox.plot_graph_route(G, route, node_color=node_colors)
+    # nx.draw_networkx_nodes(G, pos, [warehouse], node_color='red', node_size=.1, ax=ax1)
+    # nx.draw_networkx_nodes(G, pos, customers, node_color='blue', node_size=.1, ax=ax1)
+    # nx.draw_networkx_nodes(G, pos, remaining_nodes, node_color='grey', node_size=.1, ax=ax1)
+    # nx.draw_networkx_edges(G, pos, G.edges(), ax=ax1)
+    # ox.plot_graph_route(G, nn_path)
     # use this for waxman graph
     # labels = {node: node for node in G.nodes()}
     # use this for grid graph
-    labels = {node: i + 1 for i, node in enumerate(G.nodes())}
-    nx.draw_networkx_labels(G, pos, labels, ax=ax1)
-    nx.draw_networkx_edges(G, pos, G.edges(), ax=ax1)
+    # labels = {node: i + 1 for i, node in enumerate(G.nodes())}
+    # nx.draw_networkx_labels(G, pos, labels, ax=ax1)
+    # nx.draw_networkx_edges(G, pos, G.edges(), ax=ax1)
 
-    nx.draw(nn_graph, nx.get_node_attributes(nn_graph, 'pos'), labels=labels, ax=ax2)
-    # nx.draw_networkx_edge_labels(G, pos, {(u, v): round(G.edges[u, v]['weight'], 2) for u, v in G.edges()})
-    plt.show()
+    # nx.draw(nn_graph, nx.get_node_attributes(nn_graph, 'pos'), node_size=.05, ax=ax2)
+    # nx.draw_networkx_edge_labels(G, pos, {(u, v): round(G.edges[u, v]['length'], 2) for u, v in G.edges()})
+    # plt.show()
 
 if __name__ == '__main__':
     main()

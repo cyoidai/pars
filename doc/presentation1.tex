@@ -42,8 +42,8 @@
 \begin{frame}{Motivation\hfill\tiny Young Shin}
     For our project, we'll be using the analogy of delivering packages to homes.
     \begin{itemize}
-        \item Consider, school bus routing, human and robotic warehouse pickers/stockers, waste collection, snow plowing, coordination of emergency services, etc.
-        \item Finding an optimal solution is computationally expensive. Must resort to heuristics to find a reasonable solution in a reasonable amount of time.
+        \item However, also consider school bus routing, human and robotic warehouse pickers/stockers, waste collection, snow plowing, coordination of emergency services, etc.
+        \item Finding an optimal solution is computationally expensive. As such, we must resort to heuristics to find a reasonable solution in a reasonable amount of time.
         \item AI revolves around this idea of making good enough decisions in a reasonable amount of time.
     \end{itemize}
 
@@ -114,7 +114,7 @@
     \end{itemize}
     Let $T$ be a finite set of trucks each with fixed capacity $k$ where the total customers a single truck visits cannot exceed $k$.
 
-    We define function $\text{PARS}(G,w,C,T,k)$ which outputs a mapping $T\to\{(w,\dots,w)\subseteq V,\dots\}$ which describes the route of each truck starting at $w$ and ending at $w$. The goal of this function is to minimize the total distance traveled, the sum of edge weights, across all trucks.
+    We define function $\text{PARS}(G,w,C,T,k)$ which outputs a mapping $T\to\{(w,\dots,w)\subseteq V,\dots\}$ which describes the route of each truck starting at $w$ and ending at $w$. The goal of this function is to minimize the total distance traveled, the sum of edge weights, across all trucks, while also maximizing customers visited.
 \end{frame}
 
 % \begin{frame}{Formal definition}

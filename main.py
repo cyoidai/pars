@@ -1,19 +1,21 @@
 #!/usr/bin/env python3
 
+from typing import Iterable, Any
+import csv
 import math
 import random
-from typing import Iterable, Any
+import textwrap
 import networkx as nx
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 import osmnx as ox
+# from sklearn.cluster import KMeans
 
-def euclidean_distance(G: nx.Graph, n1, n2) -> float:
-    x1, y1 = G.nodes[n1]['pos']
-    x2, y2 = G.nodes[n2]['pos']
+
+def euclidean_distance(G: nx.Graph, n1, n2, attr='pos') -> float:
+    x1, y1 = G.nodes[n1][attr]
+    x2, y2 = G.nodes[n2][attr]
     return math.sqrt(math.pow(x1 - x2, 2) + math.pow(y2 - y1, 2))
 
-# def euclidean_distance(x1: int | float, y1: int | float, x2: int | float, y2: int | float) -> float:
-#     return math.sqrt(math.pow(x1 - x2, 2) + math.pow(y2 - y1, 2))
 
 def nearest_neighbor(G: nx.Graph, src, dst_nodes: Iterable | None=None):
     """
@@ -68,18 +70,20 @@ def generate_grid_city(m: int, n: int) -> nx.Graph:
     G = G.subgraph(max(nx.connected_components(G), key=len)).copy()
     return G
 
-def assign_nodes(G: nx.Graph, max_customers: int) -> tuple[Any, list[Any], list[Any]]:
+def assign_nodes(G: nx.Graph, num_customers: int) -> tuple[Any, list[Any], list[Any]]:
     """
     Given a graph, returns a random node for the warehouse, of the remaining
     nodes a list of nodes designated as customers, and a list of unassigned
     leftover nodes.
     """
+    if num_customers + 1 > len(G.nodes):
+        raise ValueError(textwrap.dedent(f'''
+            Cannot assign {num_customers} plus a central warehouse on a graph
+            with only {len(G.nodes)} nodes'''))
     remaining_nodes = list(G.nodes())
-    if len(remaining_nodes) <= 1:
-        raise ValueError('Graph must have at least 2 nodes')
     warehouse = random.choice(remaining_nodes)
     remaining_nodes.remove(warehouse)
-    customers = random.sample(remaining_nodes, k=min(max_customers, len(remaining_nodes)))
+    customers = random.sample(remaining_nodes, k=min(num_customers, len(remaining_nodes)))
     for customer in customers:
         nx.set_node_attributes(G, { customer: 'blue' }, 'viz_color')
         remaining_nodes.remove(customer)
@@ -102,70 +106,138 @@ def tsp_nn_heuristic(G: nx.Graph, src, destinations: Iterable) -> list:
     #     out_graph.add_edge(full_path[i], full_path[i + 1])
     return full_path
 
-def pars(G: nx.Graph, warehouse, customers: list, m: int, k: int) -> list[list[Any]]:
+
+# def cluster_graph_kmeans(G: nx.Graph, customers: list[Any], trucks: int, capacity: int, attr: str='pos') -> list[list[Any]]:
+#     partitions = min(trucks, len(customers))
+#     k_means = KMeans(partitions)
+#     coords = [
+#         G.nodes[customer][attr] for customer in customers
+#     ]
+#     labels = k_means.fit_predict(coords)
+#     partitions = [[] for _ in range(partitions)]
+#     for node, label in zip(customers, labels):
+#         G.nodes[node]['cluster'] = label  # Optional: save back to graph
+#         partitions[label].append(node)
+#     return partitions
+
+
+def cluster_graph_sweep(G: nx.Graph, max_cluster_size: int, center: tuple[int | float, int | float]=(0, 0), node_list: Iterable | None=None, pos_attr: str='pos') -> list[list[Any]]:
+    if node_list is None:
+        node_list = G.nodes()
+    clusters = []
+    center_x, center_y = center
+    ref_angles = {}
+    for node in node_list:
+        node_x, node_y = G.nodes[node][pos_attr]
+        x = node_x - center_x
+        y = node_y - center_y
+        angle = math.atan2(y, x)
+        ref_angles[node] = angle
+    # nx.set_node_attributes(G, ref_angles, 'ref_angle')
+    nodes_sorted = sorted(node_list, key=lambda n:ref_angles[n])
+    cluster = []
+    for node in nodes_sorted:
+        cluster.append(node)
+        if len(cluster) >= max_cluster_size:
+            clusters.append(cluster)
+            cluster = []
+    return clusters
+
+
+def pars(G: nx.Graph, warehouse, customers: list, trucks: int, truck_capacity: int) -> list[list[Any]]:
     if not customers:
         return []
-
+    max_packages = trucks * truck_capacity
+    if len(customers) > max_packages:
+        raise ValueError(textwrap.dedent(f'''
+            Fleet is unable to support {len(customers)} customers (customers >
+            trucks * truck_capacity). Either increase trucks, truck capacity or
+            reduce the number of overall customers.'''))
     routes: list[list[Any]] = []
 
-    path = nx.astar_path(G, warehouse, customers[0], lambda n1,n2:euclidean_distance(G, n1, n2))
-    path.extend(tsp_nn_heuristic(G, customers[0], customers[1::])[1::])
-    path.extend(nx.astar_path(G, path[-1], warehouse, lambda n1,n2:euclidean_distance(G, n1, n2))[1::])
-    routes.append(path)
+    # clusters = cluster_graph(G, customers, trucks, truck_capacity)
+    clusters = cluster_graph_sweep(G, truck_capacity, G.nodes[warehouse]['pos'], customers)
+    for cluster in clusters:
+        path = []
+        if len(cluster) == 1:
+            path.extend(nx.astar_path(G, warehouse, cluster[0]))
+            path.extend(nx.astar_path(G, cluster[0], warehouse)[1::])
+        else:
+            # warehouse to first customer
+            path.extend(nx.astar_path(G, warehouse, cluster[0], lambda n1,n2:euclidean_distance(G, n1, n2)))
+            # first customer to last customer
+            path.extend(tsp_nn_heuristic(G, cluster[0], cluster[1::])[1::])
+            # last customer back to warehouse
+            path.extend(nx.astar_path(G, path[-1], warehouse, lambda n1,n2:euclidean_distance(G, n1, n2))[1::])
+        routes.append(path)
 
     return routes
 
 
-def main():
-    MAX_CUSTOMERS = 16
-    # G = generate_city()
-    # G = generate_grid_city(5, 5)
-    _G = ox.graph_from_place('Albany, NY, USA', network_type='drive')
-    G = ox.project_graph(_G)
+def graph_from_address(address: str, dist=10_000) -> nx.MultiDiGraph:
+    # G = ox.graph_from_place(place, network_type='drive')
+    G = ox.graph_from_address(address, dist, network_type='drive')
+    G = ox.project_graph(G)
+    # ensure every node can route to every other node
+    max_scc = max(nx.strongly_connected_components(G), key=len)
+    G = G.subgraph(max_scc)
     nx.set_node_attributes(G, {node: (G.nodes[node]['x'], G.nodes[node]['y']) for node in G.nodes()}, 'pos')
+    return G
 
-    warehouse, customers, remaining_nodes = assign_nodes(G, MAX_CUSTOMERS)
-    print(f'Warehouse: {warehouse}')
-    print(f'Customers: {customers}')
-    routes = pars(G, warehouse, customers, 0, 0)
-    total_distance = 0
-    for route in routes:
-        total_distance += nx.path_weight(G, route, 'length')
-    # print(f'{PLACE}\t{len(customers)}\t{total_distance}')
-    print(f'Total distance traveled: {total_distance}')
 
-    # pos = nx.get_node_attributes(G, 'pos')
+def main():
+    ADDRESS = '1400 Washington Ave, Albany, NY 12222'
+    # ADDRESS = '285 Fulton St, New York, NY 10007'
+    # ADDRESS = '1600 Pennsylvania Ave NW, Washington, DC 20500'
+    # ADDRESS = '633 W 5th St, Los Angeles, CA 90071'
+    # ADDRESS = 'London SW1A 0AA, United Kingdom'
+    DISTANCE = 10_000
+    ITERATIONS = 1
+    SHOW_ROUTES = True
+    WRITE_TO_FILE = False
+    CUSTOMERS = 100
+    TRUCKS = 10
+    TRUCK_CAPACITY = 10
+    ROUTE_COLORS = ['red', 'blue', 'green', 'cyan', 'magenta', 'yellow', 'orange', 'pink']
 
-    # ox.plot_graph_route(G, route)
+    output_data: list = [('address', 'distance', 'customers', 'trucks', 'truck_capacity', 'total_distance')]
 
-    node_colors = []
-    for node in G.nodes():
-        if node == warehouse:
-            node_colors.append('yellow')
-        elif node in customers:
-            node_colors.append('blue')
-        else:
-            node_colors.append('lightgrey')
+    G = graph_from_address(ADDRESS, DISTANCE)
 
-    # fig, (ax1, ax2) = plt.subplots(1, 2)
-    # ox.plot_graph(G)
-    for route in routes:
-        ox.plot_graph_route(G, route, node_color=node_colors)
-    # nx.draw_networkx_nodes(G, pos, [warehouse], node_color='red', node_size=.1, ax=ax1)
-    # nx.draw_networkx_nodes(G, pos, customers, node_color='blue', node_size=.1, ax=ax1)
-    # nx.draw_networkx_nodes(G, pos, remaining_nodes, node_color='grey', node_size=.1, ax=ax1)
-    # nx.draw_networkx_edges(G, pos, G.edges(), ax=ax1)
-    # ox.plot_graph_route(G, nn_path)
-    # use this for waxman graph
-    # labels = {node: node for node in G.nodes()}
-    # use this for grid graph
-    # labels = {node: i + 1 for i, node in enumerate(G.nodes())}
-    # nx.draw_networkx_labels(G, pos, labels, ax=ax1)
-    # nx.draw_networkx_edges(G, pos, G.edges(), ax=ax1)
+    for _ in range(ITERATIONS):
+        warehouse, customers, remaining_nodes = assign_nodes(G, CUSTOMERS)
+        routes = pars(G, warehouse, customers, TRUCKS, TRUCK_CAPACITY)
+        total_distance = 0
+        for route in routes:
+            total_distance += nx.path_weight(G, route, 'length')
 
-    # nx.draw(nn_graph, nx.get_node_attributes(nn_graph, 'pos'), node_size=.05, ax=ax2)
-    # nx.draw_networkx_edge_labels(G, pos, {(u, v): round(G.edges[u, v]['length'], 2) for u, v in G.edges()})
-    # plt.show()
+        stats = (ADDRESS, DISTANCE, CUSTOMERS, TRUCKS, TRUCK_CAPACITY, total_distance / 1000)
+        output_data.append(stats)
+        print(stats)
+
+        if SHOW_ROUTES:
+            node_colors = []
+            node_sizes = []
+            for node in G.nodes():
+                if node == warehouse:
+                    node_colors.append('white')
+                    node_sizes.append(32)
+                elif node in customers:
+                    node_colors.append('white')
+                    node_sizes.append(32)
+                else:
+                    node_colors.append('lightgrey')
+                    node_sizes.append(0)
+            route_colors = []
+            for i in range(len(routes)):
+                route_colors.append(ROUTE_COLORS[i % len(ROUTE_COLORS)])
+            ox.plot_graph_routes(G, routes, route_colors=route_colors
+                , node_size=node_sizes, node_color=node_colors)
+
+    if WRITE_TO_FILE:
+        with open('output.tsv', 'w', newline='', encoding='utf-8') as output_file:
+            writer = csv.writer(output_file, delimiter='\t')
+            writer.writerows(output_data)
 
 if __name__ == '__main__':
     main()

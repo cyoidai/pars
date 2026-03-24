@@ -47,19 +47,6 @@ def generate_city() -> nx.Graph:
 
 def generate_grid_city(m: int, n: int) -> nx.Graph:
     G: nx.Graph = nx.grid_2d_graph(m, n)
-    # x_min, y_min, x_max, y_max = domain
-    # node_index = 0
-    # node_index_up = None
-    # node_index_left = None
-    # G = nx.Graph()
-    # for y_index in range(y_count):
-    #     y = (y_index + 1) * (y_max - y_min / y_count)
-    #     for x_index in range(x_count):
-    #         x = (x_index + 1) * (x_max - x_min / x_count)
-    #         G.add_node(node_index)
-    #         nx.set_node_attributes(G, {node_index: (x, y)}, 'pos')
-    #         node_index_left = node_index
-    #         node_index += 1
     pos = {(x,y): (x,y) for x, y in G.nodes()}
     nx.set_node_attributes(G, pos, 'pos')
     weights = {}
@@ -72,7 +59,7 @@ def generate_grid_city(m: int, n: int) -> nx.Graph:
 
 def assign_nodes(G: nx.Graph, num_customers: int) -> tuple[Any, list[Any], list[Any]]:
     """
-    Given a graph, returns a random node for the warehouse, of the remaining
+    Given a graph, return a random node for the warehouse, of the remaining
     nodes a list of nodes designated as customers, and a list of unassigned
     leftover nodes.
     """
@@ -83,27 +70,26 @@ def assign_nodes(G: nx.Graph, num_customers: int) -> tuple[Any, list[Any], list[
     remaining_nodes = list(G.nodes())
     warehouse = random.choice(remaining_nodes)
     remaining_nodes.remove(warehouse)
-    customers = random.sample(remaining_nodes, k=min(num_customers, len(remaining_nodes)))
+    customers = random.sample(remaining_nodes, k=num_customers)
     for customer in customers:
-        nx.set_node_attributes(G, { customer: 'blue' }, 'viz_color')
         remaining_nodes.remove(customer)
     return warehouse, customers, remaining_nodes
 
 
-def tsp_nn_heuristic(G: nx.Graph, src, destinations: Iterable) -> list:
-    dst = list(destinations)
-    current_node = src
-    full_path = [src]
-    # out_graph = nx.DiGraph(G)
-    # out_graph.clear_edges()
-    while dst:
-        next_node, _dist = nearest_neighbor(G, current_node, dst)
-        path = nx.astar_path(G, current_node, next_node, lambda u,v:euclidean_distance(G, u, v))
+def tsp_nn_heuristic(G: nx.Graph, source, nodes: Iterable) -> list:
+    """
+    Solves a road network TSP using nearest neighbor heuristic for picking the
+    next node to visit and A* search for routing between nodes.
+    """
+    nodes_left = list(nodes)
+    current_node = source
+    full_path = [current_node]
+    while nodes_left:
+        next_node, _dist = nearest_neighbor(G, current_node, nodes_left)
+        path = nx.astar_path(G, current_node, next_node, lambda u,v:euclidean_distance(G, u, v), 'length')
         full_path += path[1::]
-        dst.remove(next_node)
+        nodes_left.remove(next_node)
         current_node = next_node
-    # for i in range(len(full_path) - 1):
-    #     out_graph.add_edge(full_path[i], full_path[i + 1])
     return full_path
 
 
@@ -155,16 +141,15 @@ def pars(G: nx.Graph, warehouse, customers: list, trucks: int, truck_capacity: i
             reduce the number of overall customers.'''))
     routes: list[list[Any]] = []
 
-    # clusters = cluster_graph(G, customers, trucks, truck_capacity)
     clusters = cluster_graph_sweep(G, truck_capacity, G.nodes[warehouse]['pos'], customers)
     for cluster in clusters:
         path = []
         if len(cluster) == 1:
-            path.extend(nx.astar_path(G, warehouse, cluster[0]))
-            path.extend(nx.astar_path(G, cluster[0], warehouse)[1::])
+            path.extend(nx.astar_path(G, warehouse, cluster[0], lambda n1,n2:euclidean_distance(G, n1, n2), 'length'))
+            path.extend(nx.astar_path(G, cluster[0], warehouse, lambda n1,n2:euclidean_distance(G, n1, n2), 'length')[1::])
         else:
             # warehouse to first customer
-            path.extend(nx.astar_path(G, warehouse, cluster[0], lambda n1,n2:euclidean_distance(G, n1, n2)))
+            path.extend(nx.astar_path(G, warehouse, cluster[0], lambda n1,n2:euclidean_distance(G, n1, n2), 'length'))
             # first customer to last customer
             path.extend(tsp_nn_heuristic(G, cluster[0], cluster[1::])[1::])
             # last customer back to warehouse
@@ -174,14 +159,14 @@ def pars(G: nx.Graph, warehouse, customers: list, trucks: int, truck_capacity: i
     return routes
 
 
-def graph_from_address(address: str, dist=10_000) -> nx.MultiDiGraph:
-    # G = ox.graph_from_place(place, network_type='drive')
+def graph_from_address(address: str, dist: int=10_000) -> nx.MultiDiGraph:
     G = ox.graph_from_address(address, dist, network_type='drive')
     G = ox.project_graph(G)
     # ensure every node can route to every other node
     max_scc = max(nx.strongly_connected_components(G), key=len)
     G = G.subgraph(max_scc)
-    nx.set_node_attributes(G, {node: (G.nodes[node]['x'], G.nodes[node]['y']) for node in G.nodes()}, 'pos')
+    pos = { node: (G.nodes[node]['x'], G.nodes[node]['y']) for node in G.nodes() }
+    nx.set_node_attributes(G, pos, 'pos')
     return G
 
 

@@ -5,6 +5,7 @@ import csv
 import math
 import random
 import textwrap
+import itertools
 import networkx as nx
 # import matplotlib.pyplot as plt
 import osmnx as ox
@@ -121,12 +122,8 @@ def cluster_graph_sweep(G: nx.Graph, max_cluster_size: int, center: tuple[int | 
         ref_angles[node] = angle
     # nx.set_node_attributes(G, ref_angles, 'ref_angle')
     nodes_sorted = sorted(node_list, key=lambda n:ref_angles[n])
-    cluster = []
-    for node in nodes_sorted:
-        cluster.append(node)
-        if len(cluster) >= max_cluster_size:
-            clusters.append(cluster)
-            cluster = []
+    for cluster in itertools.batched(nodes_sorted, max_cluster_size):
+        clusters.append(list(cluster))
     return clusters
 
 

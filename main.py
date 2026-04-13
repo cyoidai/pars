@@ -7,15 +7,10 @@ import random
 import textwrap
 import itertools
 import networkx as nx
-# import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt
 import osmnx as ox
 # from sklearn.cluster import KMeans
-
-
-def euclidean_distance(G: nx.Graph, n1, n2, attr='pos') -> float:
-    x1, y1 = G.nodes[n1][attr]
-    x2, y2 = G.nodes[n2][attr]
-    return math.sqrt(math.pow(x1 - x2, 2) + math.pow(y2 - y1, 2))
+from pars import *
 
 
 def nearest_neighbor(G: nx.Graph, src, dst_nodes: Iterable | None=None):
@@ -139,19 +134,31 @@ def pars(G: nx.Graph, warehouse, customers: list, trucks: int, truck_capacity: i
     routes: list[list[Any]] = []
 
     clusters = cluster_graph_sweep(G, truck_capacity, G.nodes[warehouse]['pos'], customers)
+    # for cluster in clusters:
+    #     path = []
+    #     if len(cluster) == 1:
+    #         path.extend(nx.astar_path(G, warehouse, cluster[0], lambda n1,n2:euclidean_distance(G, n1, n2), 'length'))
+    #         path.extend(nx.astar_path(G, cluster[0], warehouse, lambda n1,n2:euclidean_distance(G, n1, n2), 'length')[1::])
+    #     else:
+    #         # warehouse to first customer
+    #         path.extend(nx.astar_path(G, warehouse, cluster[0], lambda n1,n2:euclidean_distance(G, n1, n2), 'length'))
+    #         # first customer to last customer
+    #         path.extend(tsp_nn_heuristic(G, cluster[0], cluster[1::])[1::])
+    #         # last customer back to warehouse
+    #         path.extend(nx.astar_path(G, path[-1], warehouse, lambda n1,n2:euclidean_distance(G, n1, n2))[1::])
+    #     routes.append(path)
+
+    nonrouting_nodes = customers.copy()
+    nonrouting_nodes.append(warehouse)
+    K, routings = road_network_to_complete_graph(G, nonrouting_nodes, 'length')
     for cluster in clusters:
-        path = []
-        if len(cluster) == 1:
-            path.extend(nx.astar_path(G, warehouse, cluster[0], lambda n1,n2:euclidean_distance(G, n1, n2), 'length'))
-            path.extend(nx.astar_path(G, cluster[0], warehouse, lambda n1,n2:euclidean_distance(G, n1, n2), 'length')[1::])
-        else:
-            # warehouse to first customer
-            path.extend(nx.astar_path(G, warehouse, cluster[0], lambda n1,n2:euclidean_distance(G, n1, n2), 'length'))
-            # first customer to last customer
-            path.extend(tsp_nn_heuristic(G, cluster[0], cluster[1::])[1::])
-            # last customer back to warehouse
-            path.extend(nx.astar_path(G, path[-1], warehouse, lambda n1,n2:euclidean_distance(G, n1, n2))[1::])
-        routes.append(path)
+        subgraph_nodes = cluster.copy()
+        subgraph_nodes.append(warehouse)
+        annealing = SimulatedAnnealing(K.subgraph(subgraph_nodes), warehouse)
+        best_state = annealing.run(lambda s:draw_routes(G, [expand_route(s.current_state.route, routings)], customers, warehouse, False, True))
+        # best_state = annealing.run()
+        route = expand_route(best_state.route, routings)
+        routes.append(route)
 
     return routes
 
@@ -167,54 +174,75 @@ def graph_from_address(address: str, dist: int=10_000) -> nx.MultiDiGraph:
     return G
 
 
+IMAGE_COUNTER = 0
+
+
+def draw_routes(G: nx.Graph, routes: list[list[Any]], customers: list, warehouse, show: bool, save: bool):
+    global IMAGE_COUNTER
+    ROUTE_COLORS = ['red', 'blue', 'green', 'cyan', 'magenta', 'yellow', 'orange', 'pink']
+    node_colors = []
+    node_sizes = []
+    for node in G.nodes():
+        if node == warehouse:
+            node_colors.append('white')
+            node_sizes.append(32)
+        elif node in customers:
+            node_colors.append('white')
+            node_sizes.append(32)
+        else:
+            node_colors.append('lightgrey')
+            node_sizes.append(0)
+    route_colors = []
+    for i in range(len(routes)):
+        route_colors.append(ROUTE_COLORS[i % len(ROUTE_COLORS)])
+    ox.plot_graph_routes(G, routes, route_colors=route_colors
+        , node_size=node_sizes, node_color=node_colors, show=show, save=save
+        , filepath=f'out/route{IMAGE_COUNTER}.png')
+    IMAGE_COUNTER += 1
+
+
 def main():
     ADDRESS = '1400 Washington Ave, Albany, NY 12222'
-    # ADDRESS = '285 Fulton St, New York, NY 10007'
+    # ADDRESS = '20 W 34th St., New York, NY 10001'
     # ADDRESS = '1600 Pennsylvania Ave NW, Washington, DC 20500'
     # ADDRESS = '633 W 5th St, Los Angeles, CA 90071'
     # ADDRESS = 'London SW1A 0AA, United Kingdom'
     DISTANCE = 10_000
     ITERATIONS = 1
-    SHOW_ROUTES = True
+    SHOW_ROUTES = False
+    SAVE_ROUTES = True
     WRITE_TO_FILE = False
-    CUSTOMERS = 100
-    TRUCKS = 10
+    CUSTOMERS = 10
+    TRUCKS = 1
     TRUCK_CAPACITY = 10
-    ROUTE_COLORS = ['red', 'blue', 'green', 'cyan', 'magenta', 'yellow', 'orange', 'pink']
 
     output_data: list = [('address', 'distance', 'customers', 'trucks', 'truck_capacity', 'total_distance')]
 
     G = graph_from_address(ADDRESS, DISTANCE)
 
-    for _ in range(ITERATIONS):
-        warehouse, customers, remaining_nodes = assign_nodes(G, CUSTOMERS)
-        routes = pars(G, warehouse, customers, TRUCKS, TRUCK_CAPACITY)
-        total_distance = 0
-        for route in routes:
-            total_distance += nx.path_weight(G, route, 'length')
+    # lat = nx.get_node_attributes(G, 'y').values()
+    # lon = nx.get_node_attributes(G, 'x').values()
+    # print(max(lat), max(lon))
+    # print(min(lat), min(lon))
 
+    for _ in range(ITERATIONS):
+        # CUSTOMERS = random.randint(1, TRUCKS * TRUCK_CAPACITY)
+        warehouse, customers, remaining_nodes = assign_nodes(G, CUSTOMERS)
+
+        # nonrouting_nodes = customers.copy()
+        # nonrouting_nodes.append(warehouse)
+        # K, routes = road_network_to_complete_graph(G, nonrouting_nodes, 'length')
+        # nx.draw(K)
+        # plt.show()
+
+        routes = pars(G, warehouse, customers, TRUCKS, TRUCK_CAPACITY)
+        total_distance = path_weight_sum(G, routes)
         stats = (ADDRESS, DISTANCE, CUSTOMERS, TRUCKS, TRUCK_CAPACITY, total_distance / 1000)
         output_data.append(stats)
         print(stats)
 
-        if SHOW_ROUTES:
-            node_colors = []
-            node_sizes = []
-            for node in G.nodes():
-                if node == warehouse:
-                    node_colors.append('white')
-                    node_sizes.append(32)
-                elif node in customers:
-                    node_colors.append('white')
-                    node_sizes.append(32)
-                else:
-                    node_colors.append('lightgrey')
-                    node_sizes.append(0)
-            route_colors = []
-            for i in range(len(routes)):
-                route_colors.append(ROUTE_COLORS[i % len(ROUTE_COLORS)])
-            ox.plot_graph_routes(G, routes, route_colors=route_colors
-                , node_size=node_sizes, node_color=node_colors)
+        if SHOW_ROUTES or SAVE_ROUTES:
+            draw_routes(G, routes, customers, warehouse, SHOW_ROUTES, SAVE_ROUTES)
 
     if WRITE_TO_FILE:
         with open('output.tsv', 'w', newline='', encoding='utf-8') as output_file:

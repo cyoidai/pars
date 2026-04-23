@@ -4,20 +4,27 @@
 \usecolortheme{default}
 \usefonttheme{structurebold}
 
-\usepackage[skip=6pt]{parskip}
-\usepackage{graphicx}
-\graphicspath{{static}}
-
 \setbeamertemplate{navigation symbols}{}
 
-\title{Package Assignment and Routing System (PARS)}
-\author{%
-    Lakshay Bansal (lbansal@albany.edu), \\
-    Mathew Robotham (mrobotham@albany.edu), \\
-    Young Shin (yshin5@albany.edu)
+\usepackage[skip=6pt]{parskip}
+\usepackage{siunitx}
+\usepackage{graphicx}
+\graphicspath{{static}}
+\hypersetup{
+    pdfauthor={Lakshay Bansal, Mathew Robotham, Young Shin},
+    pdftitle={PARS Presentation 1},
+    pdfsubject={ICSI 435},
+    colorlinks,
+    citecolor=blue,
+    filecolor=blue,
+    linkcolor=blue,
+    urlcolor=blue
 }
+
+\title{Package Assignment and Routing System (PARS)}
+\author{Lakshay Bansal, Mathew Robotham, Young Shin}
 \institute{University at Albany, SUNY}
-\date{\today}
+\date{3 March 2026}
 
 \begin{document}
 
@@ -103,18 +110,18 @@
 \end{frame}
 
 \begin{frame}{Formal definition\hfill\tiny Mathew Robotham}
-    Let $G=(V,E)$ be a connected, weighted graph representing a road network where
+    Let $G=(V,E)$ be a strongly connected, weighted, directed graph where
     \begin{itemize}
         {\parskip=0pt
         \item vertices represent intersecting roads and/or customers,
-        \item vertices also possess latitude/longitude information $(x,y)$,
+        \item all vertices possess latitude/longitude information $(x,y)$,
         \item all trucks start and end at a central warehouse described by a node $w\in V$,
-        \item $C\subseteq V\setminus\{w\}$ is the set of destinations (customers) the trucks must visit,
+        \item $C\subseteq V\setminus\{w\}$ is the set of customers (destinations) the trucks must visit,
         \item edges represent the existence of a road connecting two vertices where edge weights describe the distance between the two nodes.}
     \end{itemize}
-    Let $T$ be a finite set of trucks each with fixed capacity $k$ where the total customers a single truck visits cannot exceed $k$.
+    Let $T$ be a finite set of trucks each with fixed capacity $k$ where the total number of customers a single truck visits cannot exceed $k$. Additionally, ensure $|T|k\geq|C|$ so that all customers are fullfilled in a single round.
 
-    We define function $\text{PARS}(G,w,C,T,k)$ which outputs a mapping $T\to\{(w,\dots,w)\subseteq V,\dots\}$ which describes the route of each truck starting at $w$ and ending at $w$. The goal of this function is to minimize the total distance traveled, the sum of edge weights, across all trucks, while also maximizing customers visited.
+    We define function $\text{PARS}(G,w,C,T,k)$ which outputs a mapping $T\to\{(w,\dots,w)\subseteq V,\dots\}$ which describes the route of each truck starting at $w$ and ending at $w$. The goal of this function is to minimize the total distance traveled, the sum of edge weights, across all trucks.
 \end{frame}
 
 % \begin{frame}{Formal definition}
@@ -136,8 +143,17 @@
         \item Now solve a traveling salesman problem for each cluster using nearest-neighbor heuristic for choosing the next stop in the route and A* search for routing from one stop to the next.
         \item Use reinforcement learning to attempt to find a more optimal solution over our classical approach.
         \item We define our reward function to reward visiting as many customers as possible while minimizing overall distance traveled.
+        \item If time allows, we also want to investigate solving this problem using one of the modern solutions listed previously.
     \end{enumerate}
     Our primary goal is to reduce the distance traveled by all trucks in total. We will record this metric over many simulations, then compare and contrast our classical and modern solutions.
+\end{frame}
+
+\begin{frame}{Methodology}
+    Real-world road network information will be obtained via OpenStreetMap using the Python module \texttt{osmnx}.
+
+    The following cities will be used as reference cities: Albany, NY, New York, NY, Washington, DC, Los Angles, CA.
+
+    From this, we obtain a \qty{20}{\km}\times\qty{20}{\km} square around the central address. To ensure routing between any pair of nodes, we take the subgraph of this graph that contains the largest strongly connected component.
 \end{frame}
 
 % \begin{frame}{Evaluation}
@@ -148,15 +164,15 @@
 %     \end{itemize}
 % \end{frame}
 
-\begin{frame}{Main reference\hfill\tiny Young Shin}
-    I. Bello, H. Pham, Q. Le, M. Norouzi, S. Bengio, ``Neural Combinatorial Optimization with Reinforcement Learning,'' 2017. [Online] Available: \url{https://arxiv.org/abs/1611.09940}
-    \begin{itemize}
-        \item This paper introduces a framework for solving combinatorial optimization problems using neural networks and reinforcement learning.
-        \item Traditional solvers often rely on handcrafted heuristics that are difficult to adapt to new problem types. The use of neural networks and reinforcement learning addresses these problems.
-        \item Demonstrates that neural networks can learn their own heuristics for NP-hard problems through trial and error (RL), providing a general-purpose alternative to human-engineered optimization algorithms.
-    \end{itemize}
-    % I. Bello, H. Pham, Q. Le, M. Norouzi, S. Bengio, ``Neural Combinatorial Optimization with Reinforcement Learning,'' 2017. [Online] Available: \url{https://arxiv.org/abs/1611.09940}.
-\end{frame}
+% \begin{frame}{Main reference\hfill\tiny Young Shin}
+%     I. Bello, H. Pham, Q. Le, M. Norouzi, S. Bengio, ``Neural Combinatorial Optimization with Reinforcement Learning,'' 2017. [Online] Available: \url{https://arxiv.org/abs/1611.09940}
+%     \begin{itemize}
+%         \item This paper introduces a framework for solving combinatorial optimization problems using neural networks and reinforcement learning.
+%         \item Traditional solvers often rely on handcrafted heuristics that are difficult to adapt to new problem types. The use of neural networks and reinforcement learning addresses these problems.
+%         \item Demonstrates that neural networks can learn their own heuristics for NP-hard problems through trial and error (RL), providing a general-purpose alternative to human-engineered optimization algorithms.
+%     \end{itemize}
+%     % I. Bello, H. Pham, Q. Le, M. Norouzi, S. Bengio, ``Neural Combinatorial Optimization with Reinforcement Learning,'' 2017. [Online] Available: \url{https://arxiv.org/abs/1611.09940}.
+% \end{frame}
 
 \begin{frame}{Progress so far\hfill\tiny Mathew Robotham}
     \begin{center}

@@ -214,3 +214,7 @@ __marimo__/
 *.fdb_latexmk
 
 cache/
+
+doc/static/annealing_demo
+doc/static/Hill_Climbing_with_Simulated_Annealing
+doc/static/sweep_algorithm_demo_frames

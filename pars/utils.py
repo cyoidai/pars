@@ -61,3 +61,19 @@ def expand_route(route: list[Any], routings: dict[tuple[Any, Any], list[Any]]) -
         expanded_segment = routings[(route[i], route[i+1])][1::]
         expanded_route.extend(expanded_segment)
     return expanded_route
+
+
+def graph_from_address(address: str, dist: int = 10_000) -> nx.MultiDiGraph:
+    G = ox.graph_from_address(address, dist, network_type="drive")
+    G = ox.project_graph(G)
+
+    max_scc = max(nx.strongly_connected_components(G), key=len)
+    G = G.subgraph(max_scc).copy()
+
+    pos = {
+        node: (G.nodes[node]["x"], G.nodes[node]["y"])
+        for node in G.nodes()
+    }
+
+    nx.set_node_attributes(G, pos, "pos")
+    return G

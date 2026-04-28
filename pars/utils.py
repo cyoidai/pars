@@ -34,20 +34,24 @@ def road_network_to_complete_graph(G: nx.MultiDiGraph, nodes: list, weight_attr:
                 continue
             routings[(source, target)] = paths[target]
             K.add_edges_from([(source, target, {weight_attr: distances[target]})])
-    # for u, v in itertools.product(nodes, nodes):
-    #     if u == v:
-    #         continue
-    #     uv_path = nx.astar_path(G, u, v, lambda n1,n2: euclidean_distance(G, n1, n2), weight_attr)
-    #     vu_path = nx.astar_path(G, v, u, lambda n1,n2: euclidean_distance(G, n1, n2), weight_attr)
-    #     uv_dist = nx.path_weight(G, uv_path, weight_attr)
-    #     vu_dist = nx.path_weight(G, vu_path, weight_attr)
-    #     routings[(u, v)] = uv_path
-    #     routings[(v, u)] = vu_path
-    #     K.add_edges_from([
-    #         (u, v, {weight_attr: uv_dist}),
-    #         (v, u, {weight_attr: vu_dist})
-    #     ])
     return K, routings
+
+
+def road_network_to_distance_map(G: nx.MultiDiGraph, nodes: list, weight_attr: str='length') -> tuple[list, dict[tuple[Any, Any], int | float], dict[tuple[Any, Any], list[Any]]]:
+    """
+    Converts a road network graph into a distance map which is usually given
+    as input to solving a TSP/VRP.
+    """
+    routings: dict[tuple[Any, Any], list[Any]] = {}
+    distances: dict[tuple[Any, Any], int | float] = {}
+    for source in nodes:
+        local_distances, paths = nx.single_source_dijkstra(G, source, weight=weight_attr)
+        for target in nodes:
+            if source == target:
+                continue
+            routings[(source, target)] = paths[target]
+            distances[(source, target)] = local_distances[target]
+    return list(G.nodes().keys()), distances, routings
 
 
 def expand_route(route: list[Any], routings: dict[tuple[Any, Any], list[Any]]) -> list[Any]:

@@ -7,7 +7,6 @@ import random
 import textwrap
 import itertools
 import networkx as nx
-import matplotlib.pyplot as plt
 import osmnx as ox
 # from sklearn.cluster import KMeans
 from pars import *
@@ -32,26 +31,28 @@ def nearest_neighbor(G: nx.Graph, src, dst_nodes: Iterable | None=None):
     return nearest, dist
 
 
-def generate_city() -> nx.Graph:
-    G = nx.waxman_graph(48, .3, .15)
-    G = G.subgraph(max(nx.connected_components(G), key=len)).copy()
-    weights = {}
-    for u, v in G.edges():
-        weights[(u, v)] = euclidean_distance(G, u, v)
-    nx.set_edge_attributes(G, weights, 'length')
-    return G
+# def generate_city() -> nx.Graph:
+#     G = nx.waxman_graph(48, .3, .15)
+#     G = G.subgraph(max(nx.connected_components(G), key=len)).copy()
+#     weights = {}
+#     for u, v in G.edges():
+#         weights[(u, v)] = euclidean_distance(G, u, v)
+#     nx.set_edge_attributes(G, weights, 'length')
+#     return G
 
-def generate_grid_city(m: int, n: int) -> nx.Graph:
-    G: nx.Graph = nx.grid_2d_graph(m, n)
-    pos = {(x,y): (x,y) for x, y in G.nodes()}
-    nx.set_node_attributes(G, pos, 'pos')
-    weights = {}
-    for u, v in G.edges():
-        weights[(u, v)] = euclidean_distance(G, u, v)
-    nx.set_edge_attributes(G, weights, 'length')
-    G.remove_edges_from(random.sample(list(G.edges()), round(.25 * len(G.edges()))))
-    G = G.subgraph(max(nx.connected_components(G), key=len)).copy()
-    return G
+
+# def generate_grid_city(m: int, n: int) -> nx.Graph:
+#     G: nx.Graph = nx.grid_2d_graph(m, n)
+#     pos = {(x,y): (x,y) for x, y in G.nodes()}
+#     nx.set_node_attributes(G, pos, 'pos')
+#     weights = {}
+#     for u, v in G.edges():
+#         weights[(u, v)] = euclidean_distance(G, u, v)
+#     nx.set_edge_attributes(G, weights, 'length')
+#     G.remove_edges_from(random.sample(list(G.edges()), round(.25 * len(G.edges()))))
+#     G = G.subgraph(max(nx.connected_components(G), key=len)).copy()
+#     return G
+
 
 def assign_nodes(G: nx.Graph, num_customers: int) -> tuple[Any, list[Any], list[Any]]:
     """
@@ -134,6 +135,8 @@ def pars(G: nx.Graph, warehouse, customers: list, trucks: int, truck_capacity: i
     routes: list[list[Any]] = []
 
     clusters = cluster_graph_sweep(G, truck_capacity, G.nodes[warehouse]['pos'], customers)
+
+    # performs nearest-neighbor heuristic
     # for cluster in clusters:
     #     path = []
     #     if len(cluster) == 1:
@@ -148,6 +151,7 @@ def pars(G: nx.Graph, warehouse, customers: list, trucks: int, truck_capacity: i
     #         path.extend(nx.astar_path(G, path[-1], warehouse, lambda n1,n2:euclidean_distance(G, n1, n2))[1::])
     #     routes.append(path)
 
+    # performs simulated annealing
     nonrouting_nodes = customers.copy()
     nonrouting_nodes.append(warehouse)
     K, routings = road_network_to_complete_graph(G, nonrouting_nodes, 'length')
@@ -155,8 +159,7 @@ def pars(G: nx.Graph, warehouse, customers: list, trucks: int, truck_capacity: i
         subgraph_nodes = cluster.copy()
         subgraph_nodes.append(warehouse)
         annealing = SimulatedAnnealing(K.subgraph(subgraph_nodes), warehouse)
-        best_state = annealing.run(lambda s:draw_routes(G, [expand_route(s.current_state.route, routings)], customers, warehouse, False, True))
-        # best_state = annealing.run()
+        best_state = annealing.run()
         route = expand_route(best_state.route, routings)
         routes.append(route)
 
@@ -209,9 +212,9 @@ def main():
     # ADDRESS = 'London SW1A 0AA, United Kingdom'
     DISTANCE = 10_000
     ITERATIONS = 1
-    SHOW_ROUTES = False
-    SAVE_ROUTES = True
-    WRITE_TO_FILE = False
+    DRAW_ROUTES_TO_SCREEN = True
+    DRAW_ROUTES_TO_FILE = False
+    WRITE_STATS_TO_FILE = False
     CUSTOMERS = 10
     TRUCKS = 1
     TRUCK_CAPACITY = 10
@@ -241,13 +244,14 @@ def main():
         output_data.append(stats)
         print(stats)
 
-        if SHOW_ROUTES or SAVE_ROUTES:
-            draw_routes(G, routes, customers, warehouse, SHOW_ROUTES, SAVE_ROUTES)
+        if DRAW_ROUTES_TO_SCREEN or DRAW_ROUTES_TO_FILE:
+            draw_routes(G, routes, customers, warehouse, DRAW_ROUTES_TO_SCREEN, DRAW_ROUTES_TO_FILE)
 
-    if WRITE_TO_FILE:
+    if WRITE_STATS_TO_FILE:
         with open('output.tsv', 'w', newline='', encoding='utf-8') as output_file:
             writer = csv.writer(output_file, delimiter='\t')
             writer.writerows(output_data)
+
 
 if __name__ == '__main__':
     main()

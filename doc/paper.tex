@@ -80,7 +80,7 @@ The nearest-neighbor method serves as a common greedy heuristic which helps esta
 
 The Clarke--Wright Savings Algorithm \cite{ClarkeWright1964} stands as one of the most significant early heuristics. The method establishes delivery routes by merging existing routes which results in reduced travel distances through calculated distance savings. The system remains popular for medium-sized routing problems because it achieves high performance through straightforward operational procedures.
 
-Machine learning methods can discover their own heuristics and apply them to many different problems. \cite{bello2017neuralcombinatorialoptimizationreinforcement} discusses neural combinatorial optimization (NCO) which is a framework for tackling combinatorial optimization problems using reinforcement learning and neural networks. They use a pointer network architecture which consists of two RNN modules along with a policy gradient. Here reinforcement learning is ideal because combinatorial optimization problems have simple reward mechanisms.
+Machine learning methods can discover their own heuristics and apply them to many different problems. \cite{Bello2017} discusses neural combinatorial optimization (NCO) which is a framework for tackling combinatorial optimization problems using reinforcement learning and neural networks. They use a pointer network architecture which consists of two RNN modules along with a policy gradient. Here reinforcement learning is ideal because combinatorial optimization problems have simple reward mechanisms.
 
 In experimentation, reinforcement learning pre-training was conducted. This is different from showing the AI thousands of perfect, optimal routes which would have to be calculated with expensive solvers. This particular model is able to obtain results using either a greedy, sampling, or active search approach. Greedy picks the city it thinks is best at every sine step, however this leads to shortsightedness in the AI's decision-making. Sampling involves the model generating many different tours and picking the shortest one. Active search is the most powerful method whereby each time the model is given a new problem; it attempts to learn and fine-tune its parameters specifically for that one map. These methods were compared against baselines like Christofides algorithm and supervised learning, and the RL approach was significantly better at creating shorter tours.
 
@@ -166,32 +166,7 @@ The system, which needs to function correctly in various delivery situations, pr
 
 Balancing the reward and punishment for reinforcement learning AI is one of the expected challenges. If the punishment is too strong and the reward is too weak then the AI would learn to stay still as moving around will be too costly. Another is reverse, if the cost is too weak and reward is too high, the AI could learn to ignore the cost of the path and go straight as reaching the reward fast as possible would lead to higher score. The only way to deal with this problem seems to be trying out different point systems and checking if the resulting AI is behaving as desired.
 
-\begin{thebibliography}{00}
-
-    \bibitem{Golden2008}
-    B. Golden, S. Raghavan, and E. Wasil, \textit{The Vehicle Routing Problem: Latest Advances and New Challenges}. New York, NY, USA: Springer, 2008.
-
-    \bibitem{ClarkeWright1964}
-    G. Clarke and J. W. Wright, “Scheduling of vehicles from a central depot to multiple delivery points,” \textit{Operations Research}, vol. 12, no. 4, pp. 568–581, 1964.
-
-    \bibitem{bello2017neuralcombinatorialoptimizationreinforcement}
-    I. Bello, H. Pham, Q. Le, M. Norouzi, S. Bengio, ``Neural Combinatorial Optimization with Reinforcement Learning,'' 2017. [Online] Available: https://arxiv.org/abs/1611.09940
-
-    % \bibitem{Dorigo2004}
-    % M. Dorigo and T. Stützle, \textit{Ant Colony Optimization}. Cambridge, MA, USA: MIT Press, 2004.
-
-    % \bibitem{Goldberg1989}
-    % D. E. Goldberg, \textit{Genetic Algorithms in Search, Optimization, and Machine Learning}. Reading, MA, USA: Addison-Wesley, 1989.
-
-    % \bibitem{Google2024}
-    % Google Developers, “Vehicle Routing Problem,” 2024. [Online]. Available: https://developers.google.com/optimization/routing/vrp. [Accessed: Feb. 19, 2026].
-
-    % \bibitem{Laporte2009}
-    % G. Laporte, “Fifty years of vehicle routing,” \textit{Transportation Science}, vol. 43, no. 4, pp. 408--416, 2009.
-
-    % \bibitem{TothVigo2014}
-    % P. Toth and D. Vigo, \textit{Vehicle Routing: Problems, Methods, and Applications}. Philadelphia, PA, USA: SIAM, 2014.
-
-\end{thebibliography}
+\bibliographystyle{IEEEtran}
+\bibliography{paper}
 
 \end{document}

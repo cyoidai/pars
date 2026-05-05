@@ -1,253 +1,393 @@
 #!/usr/bin/env python3
 
-from typing import Iterable, Any
-import csv
 import math
 import random
-import textwrap
-import itertools
+import sys
+import os
+from typing import Any
+
 import networkx as nx
-import matplotlib.pyplot as plt
 import osmnx as ox
-# from sklearn.cluster import KMeans
-from pars import *
+
+IMAGE_COUNTER = 0
 
 
-def nearest_neighbor(G: nx.Graph, src, dst_nodes: Iterable | None=None):
-    """
-    Finds the nearest neighbor from a source node `src` to a set of destination
-    nodes `node_list`. If `node_list` is None, we assume all nodes in `G`.
-    """
-    min_dist = float('inf')
-    nearest = None
-    if dst_nodes is None:
-        dst_nodes = G.nodes()
-    for dst in dst_nodes:
-        if dst == src:
-            continue
-        dist = euclidean_distance(G, src, dst)
-        if dist < min_dist:
-            min_dist = dist
-            nearest = dst
-    return nearest, dist
+def euclidean_distance(G, n1, n2, attr='pos'):
+    x1, y1 = G.nodes[n1][attr]
+    x2, y2 = G.nodes[n2][attr]
+    return math.sqrt((x1 - x2)**2 + (y1 - y2)**2)
 
 
-def generate_city() -> nx.Graph:
-    G = nx.waxman_graph(48, .3, .15)
-    G = G.subgraph(max(nx.connected_components(G), key=len)).copy()
-    weights = {}
-    for u, v in G.edges():
-        weights[(u, v)] = euclidean_distance(G, u, v)
-    nx.set_edge_attributes(G, weights, 'length')
+def path_weight_sum(G, routes):
+    return sum(nx.path_weight(G, r, "length") for r in routes)
+
+
+def expand_route(route, routings):
+    full = [route[0]]
+    for i in range(len(route)-1):
+        full += routings[(route[i], route[i+1])][1:]
+    return full
+
+
+def road_network_to_complete_graph(G, nodes):
+    K = nx.DiGraph()
+    K.add_nodes_from(nodes)
+
+    routings = {}
+
+    for src in nodes:
+        dist, paths = nx.single_source_dijkstra(G, src, weight="length")
+
+        for dst in nodes:
+            if src == dst or dst not in paths:
+                continue
+
+            routings[(src, dst)] = paths[dst]
+            K.add_edge(src, dst, length=dist[dst])
+
+    return K, routings
+
+
+def graph_from_address(address, dist=5000):
+    print("Downloading road network...")
+    G = ox.graph_from_address(address, dist=dist, network_type="drive")
+    G = ox.project_graph(G)
+
+    scc = max(nx.strongly_connected_components(G), key=len)
+    G = G.subgraph(scc).copy()
+
+    pos = {n: (G.nodes[n]["x"], G.nodes[n]["y"]) for n in G.nodes()}
+    nx.set_node_attributes(G, pos, "pos")
+
+    print("Graph ready:", len(G.nodes()), "nodes")
     return G
 
-def generate_grid_city(m: int, n: int) -> nx.Graph:
-    G: nx.Graph = nx.grid_2d_graph(m, n)
-    pos = {(x,y): (x,y) for x, y in G.nodes()}
-    nx.set_node_attributes(G, pos, 'pos')
-    weights = {}
-    for u, v in G.edges():
-        weights[(u, v)] = euclidean_distance(G, u, v)
-    nx.set_edge_attributes(G, weights, 'length')
-    G.remove_edges_from(random.sample(list(G.edges()), round(.25 * len(G.edges()))))
-    G = G.subgraph(max(nx.connected_components(G), key=len)).copy()
-    return G
 
-def assign_nodes(G: nx.Graph, num_customers: int) -> tuple[Any, list[Any], list[Any]]:
-    """
-    Given a graph, return a random node for the warehouse, of the remaining
-    nodes a list of nodes designated as customers, and a list of unassigned
-    leftover nodes.
-    """
-    if num_customers + 1 > len(G.nodes):
-        raise ValueError(textwrap.dedent(f'''
-            Cannot assign {num_customers} plus a central warehouse on a graph
-            with only {len(G.nodes)} nodes'''))
-    remaining_nodes = list(G.nodes())
-    warehouse = random.choice(remaining_nodes)
-    remaining_nodes.remove(warehouse)
-    customers = random.sample(remaining_nodes, k=num_customers)
-    for customer in customers:
-        remaining_nodes.remove(customer)
-    return warehouse, customers, remaining_nodes
+def draw_routes(G, routes, customers, warehouse, name="route"):
+    global IMAGE_COUNTER
 
+    os.makedirs("out", exist_ok=True)
 
-def tsp_nn_heuristic(G: nx.Graph, source, nodes: Iterable) -> list:
-    """
-    Solves a road network TSP using nearest neighbor heuristic for picking the
-    next node to visit and A* search for routing between nodes.
-    """
-    nodes_left = list(nodes)
-    current_node = source
-    full_path = [current_node]
-    while nodes_left:
-        next_node, _dist = nearest_neighbor(G, current_node, nodes_left)
-        path = nx.astar_path(G, current_node, next_node, lambda u,v:euclidean_distance(G, u, v), 'length')
-        full_path += path[1::]
-        nodes_left.remove(next_node)
-        current_node = next_node
-    return full_path
+    base_colors = [
+        "red", "blue", "green", "orange", "purple",
+        "cyan", "magenta", "yellow", "lime", "pink",
+        "teal", "gold", "coral", "navy"
+    ]
+    route_colors = [base_colors[i % len(base_colors)] for i in range(len(routes))]
+
+    node_colors = []
+    node_sizes = []
+
+    for n in G.nodes():
+        if n == warehouse:
+            node_colors.append("yellow")
+            node_sizes.append(60)
+        elif n in customers:
+            node_colors.append("white")
+            node_sizes.append(40)
+        else:
+            node_colors.append("lightgrey")
+            node_sizes.append(0)
+
+    ox.plot_graph_routes(
+        G,
+        routes,
+        route_colors=route_colors,
+        route_linewidths=[4]*len(routes),
+        node_size=node_sizes,
+        node_color=node_colors,
+        bgcolor="black",
+        show=False,
+        save=True,
+        filepath=f"out/{name}_{IMAGE_COUNTER}.png"
+    )
+
+    IMAGE_COUNTER += 1
 
 
-# def cluster_graph_kmeans(G: nx.Graph, customers: list[Any], trucks: int, capacity: int, attr: str='pos') -> list[list[Any]]:
-#     partitions = min(trucks, len(customers))
-#     k_means = KMeans(partitions)
-#     coords = [
-#         G.nodes[customer][attr] for customer in customers
-#     ]
-#     labels = k_means.fit_predict(coords)
-#     partitions = [[] for _ in range(partitions)]
-#     for node, label in zip(customers, labels):
-#         G.nodes[node]['cluster'] = label  # Optional: save back to graph
-#         partitions[label].append(node)
-#     return partitions
+def draw_single_route(G, route, customers, warehouse, name, color):
+    os.makedirs("out", exist_ok=True)
+
+    node_colors = []
+    node_sizes = []
+
+    for n in G.nodes():
+        if n == warehouse:
+            node_colors.append("yellow")
+            node_sizes.append(70)
+        elif n in customers:
+            node_colors.append("white")
+            node_sizes.append(50)
+        else:
+            node_colors.append("lightgrey")
+            node_sizes.append(0)
+
+    ox.plot_graph_routes(
+        G,
+        [route],
+        route_colors=[color],
+        route_linewidths=[4],
+        node_size=node_sizes,
+        node_color=node_colors,
+        bgcolor="black",
+        show=False,
+        save=True,
+        filepath=f"out/{name}.png"
+    )
 
 
-def cluster_graph_sweep(G: nx.Graph, max_cluster_size: int, center: tuple[int | float, int | float]=(0, 0), node_list: Iterable | None=None, pos_attr: str='pos') -> list[list[Any]]:
-    if node_list is None:
-        node_list = G.nodes()
-    clusters = []
-    center_x, center_y = center
-    ref_angles = {}
-    for node in node_list:
-        node_x, node_y = G.nodes[node][pos_attr]
-        x = node_x - center_x
-        y = node_y - center_y
-        angle = math.atan2(y, x)
-        ref_angles[node] = angle
-    # nx.set_node_attributes(G, ref_angles, 'ref_angle')
-    nodes_sorted = sorted(node_list, key=lambda n:ref_angles[n])
-    for cluster in itertools.batched(nodes_sorted, max_cluster_size):
-        clusters.append(list(cluster))
-    return clusters
+class State:
+    def __init__(self, K, route):
+        self.K = K
+        self.route = route
+        self.energy = nx.path_weight(K, route, "length")
+
+    @staticmethod
+    def initial(K, source):
+        nodes = list(K.nodes())
+        nodes.remove(source)
+        return State(K, [source] + nodes + [source])
+
+    def next(self):
+        r = self.route[:]
+        i, j = random.sample(range(1, len(r)-1), 2)
+        r[i], r[j] = r[j], r[i]
+        return State(self.K, r)
 
 
-def pars(G: nx.Graph, warehouse, customers: list, trucks: int, truck_capacity: int) -> list[list[Any]]:
-    if not customers:
-        return []
-    max_packages = trucks * truck_capacity
-    if len(customers) > max_packages:
-        raise ValueError(textwrap.dedent(f'''
-            Fleet is unable to support {len(customers)} customers (customers >
-            trucks * truck_capacity). Either increase trucks, truck capacity or
-            reduce the number of overall customers.'''))
-    routes: list[list[Any]] = []
+class SimulatedAnnealing:
+    def __init__(self, K, source):
+        self.K = K
+        self.temperature = 10000
+        self.decay = 0.995
+        self.current = State.initial(K, source)
+        self.best = self.current
 
-    clusters = cluster_graph_sweep(G, truck_capacity, G.nodes[warehouse]['pos'], customers)
-    # for cluster in clusters:
-    #     path = []
-    #     if len(cluster) == 1:
-    #         path.extend(nx.astar_path(G, warehouse, cluster[0], lambda n1,n2:euclidean_distance(G, n1, n2), 'length'))
-    #         path.extend(nx.astar_path(G, cluster[0], warehouse, lambda n1,n2:euclidean_distance(G, n1, n2), 'length')[1::])
-    #     else:
-    #         # warehouse to first customer
-    #         path.extend(nx.astar_path(G, warehouse, cluster[0], lambda n1,n2:euclidean_distance(G, n1, n2), 'length'))
-    #         # first customer to last customer
-    #         path.extend(tsp_nn_heuristic(G, cluster[0], cluster[1::])[1::])
-    #         # last customer back to warehouse
-    #         path.extend(nx.astar_path(G, path[-1], warehouse, lambda n1,n2:euclidean_distance(G, n1, n2))[1::])
-    #     routes.append(path)
+    def accept(self, next_energy):
+        if next_energy < self.current.energy:
+            return True
+        prob = math.exp(-(next_energy - self.current.energy) / self.temperature)
+        return random.random() < prob
 
-    nonrouting_nodes = customers.copy()
-    nonrouting_nodes.append(warehouse)
-    K, routings = road_network_to_complete_graph(G, nonrouting_nodes, 'length')
+    def run(self):
+        while self.temperature > 1:
+            nxt = self.current.next()
+
+            if self.accept(nxt.energy):
+                self.current = nxt
+                if nxt.energy < self.best.energy:
+                    self.best = nxt
+
+            self.temperature *= self.decay
+
+        return self.best
+
+
+class GeneticAlgorithm:
+    def __init__(self, K, source):
+        self.K = K
+        self.source = source
+        self.population_size = 120
+        self.generations = 400
+        self.mutation_rate = 0.2
+        self.elite_size = 10
+
+        self.nodes = list(K.nodes())
+        self.nodes.remove(source)
+
+    def create_route(self):
+        r = self.nodes[:]
+        random.shuffle(r)
+        return [self.source] + r + [self.source]
+
+    def fitness(self, route):
+        try:
+            return nx.path_weight(self.K, route, "length")
+        except:
+            return float("inf")
+
+    def tournament(self, pop):
+        return min(random.sample(pop, 5), key=self.fitness)
+
+    def crossover(self, p1, p2):
+        p1 = p1[1:-1]
+        p2 = p2[1:-1]
+
+        a, b = sorted(random.sample(range(len(p1)), 2))
+        child = [None]*len(p1)
+        child[a:b] = p1[a:b]
+
+        ptr = 0
+        for n in p2:
+            if n not in child:
+                while child[ptr] is not None:
+                    ptr += 1
+                child[ptr] = n
+
+        return [self.source] + child + [self.source]
+
+    def mutate(self, r):
+        r = r[:]
+
+        if random.random() < self.mutation_rate:
+            i, j = random.sample(range(1, len(r)-1), 2)
+            r[i], r[j] = r[j], r[i]
+
+        if random.random() < self.mutation_rate:
+            i, j = sorted(random.sample(range(1, len(r)-1), 2))
+            r[i:j] = reversed(r[i:j])
+
+        return r
+
+    def run(self):
+        pop = [self.create_route() for _ in range(self.population_size)]
+
+        for g in range(self.generations):
+            pop.sort(key=self.fitness)
+
+            if g % 50 == 0:
+                print(f"GA Gen {g} Best:", self.fitness(pop[0]))
+
+            new_pop = pop[:self.elite_size]
+
+            while len(new_pop) < self.population_size:
+                p1 = self.tournament(pop)
+                p2 = self.tournament(pop)
+
+                child = self.crossover(p1, p2)
+                child = self.mutate(child)
+
+                new_pop.append(child)
+
+            pop = new_pop
+
+        pop.sort(key=self.fitness)
+        return State(self.K, pop[0])
+
+
+class AntColonyOptimization:
+    def __init__(self, K, source):
+        self.K = K
+        self.source = source
+        self.nodes = list(K.nodes())
+
+        self.pheromone = {(u, v): 1 for u in self.nodes for v in self.nodes if u != v}
+
+    def distance(self, u, v):
+        return self.K[u][v]["length"]
+
+    def choose(self, cur, unvisited):
+        scores = []
+        total = 0
+
+        for n in unvisited:
+            s = self.pheromone[(cur, n)] * (1/self.distance(cur, n))
+            scores.append((n, s))
+            total += s
+
+        pick = random.uniform(0, total)
+        curr = 0
+
+        for n, s in scores:
+            curr += s
+            if curr >= pick:
+                return n
+
+        return scores[-1][0]
+
+    def run(self):
+        best = None
+        best_d = float("inf")
+
+        for _ in range(150):
+            for _ in range(40):
+                route = [self.source]
+                unvisited = set(self.nodes)
+                unvisited.remove(self.source)
+
+                cur = self.source
+
+                while unvisited:
+                    nxt = self.choose(cur, unvisited)
+                    route.append(nxt)
+                    unvisited.remove(nxt)
+                    cur = nxt
+
+                route.append(self.source)
+
+                d = nx.path_weight(self.K, route, "length")
+
+                if d < best_d:
+                    best = route
+                    best_d = d
+
+        return State(self.K, best)
+
+
+def cluster_nodes(nodes, capacity):
+    return [nodes[i:i+capacity] for i in range(0, len(nodes), capacity)]
+
+
+def pars(G, warehouse, customers, trucks, cap, algo):
+    clusters = cluster_nodes(customers, cap)
+
+    nodes = customers + [warehouse]
+    K, routings = road_network_to_complete_graph(G, nodes)
+
+    routes = []
+
     for cluster in clusters:
-        subgraph_nodes = cluster.copy()
-        subgraph_nodes.append(warehouse)
-        annealing = SimulatedAnnealing(K.subgraph(subgraph_nodes), warehouse)
-        best_state = annealing.run(lambda s:draw_routes(G, [expand_route(s.current_state.route, routings)], customers, warehouse, False, True))
-        # best_state = annealing.run()
-        route = expand_route(best_state.route, routings)
+        sub_nodes = cluster + [warehouse]
+        sub_K = K.subgraph(sub_nodes).copy()
+
+        if algo == "sa":
+            best = SimulatedAnnealing(sub_K, warehouse).run()
+        elif algo == "ga":
+            best = GeneticAlgorithm(sub_K, warehouse).run()
+        elif algo == "aco":
+            best = AntColonyOptimization(sub_K, warehouse).run()
+        else:
+            raise ValueError("Use sa / ga / aco")
+
+        route = expand_route(best.route, routings)
         routes.append(route)
 
     return routes
 
 
-def graph_from_address(address: str, dist: int=10_000) -> nx.MultiDiGraph:
-    G = ox.graph_from_address(address, dist, network_type='drive')
-    G = ox.project_graph(G)
-    # ensure every node can route to every other node
-    max_scc = max(nx.strongly_connected_components(G), key=len)
-    G = G.subgraph(max_scc)
-    pos = { node: (G.nodes[node]['x'], G.nodes[node]['y']) for node in G.nodes() }
-    nx.set_node_attributes(G, pos, 'pos')
-    return G
-
-
-IMAGE_COUNTER = 0
-
-
-def draw_routes(G: nx.Graph, routes: list[list[Any]], customers: list, warehouse, show: bool, save: bool):
-    global IMAGE_COUNTER
-    ROUTE_COLORS = ['red', 'blue', 'green', 'cyan', 'magenta', 'yellow', 'orange', 'pink']
-    node_colors = []
-    node_sizes = []
-    for node in G.nodes():
-        if node == warehouse:
-            node_colors.append('white')
-            node_sizes.append(32)
-        elif node in customers:
-            node_colors.append('white')
-            node_sizes.append(32)
-        else:
-            node_colors.append('lightgrey')
-            node_sizes.append(0)
-    route_colors = []
-    for i in range(len(routes)):
-        route_colors.append(ROUTE_COLORS[i % len(ROUTE_COLORS)])
-    ox.plot_graph_routes(G, routes, route_colors=route_colors
-        , node_size=node_sizes, node_color=node_colors, show=show, save=save
-        , filepath=f'out/route{IMAGE_COUNTER}.png')
-    IMAGE_COUNTER += 1
-
-
 def main():
-    ADDRESS = '1400 Washington Ave, Albany, NY 12222'
-    # ADDRESS = '20 W 34th St., New York, NY 10001'
-    # ADDRESS = '1600 Pennsylvania Ave NW, Washington, DC 20500'
-    # ADDRESS = '633 W 5th St, Los Angeles, CA 90071'
-    # ADDRESS = 'London SW1A 0AA, United Kingdom'
-    DISTANCE = 10_000
-    ITERATIONS = 1
-    SHOW_ROUTES = False
-    SAVE_ROUTES = True
-    WRITE_TO_FILE = False
-    CUSTOMERS = 10
-    TRUCKS = 1
-    TRUCK_CAPACITY = 10
+    algo = sys.argv[1] if len(sys.argv) > 1 else "ga"
 
-    output_data: list = [('address', 'distance', 'customers', 'trucks', 'truck_capacity', 'total_distance')]
+    ADDRESS = "1400 Washington Ave, Albany, NY"
+    DIST = 5000
+    CUSTOMERS = 1000
+    TRUCKS = 10
+    CAPACITY = 6
 
-    G = graph_from_address(ADDRESS, DISTANCE)
+    print("Running:", algo)
 
-    # lat = nx.get_node_attributes(G, 'y').values()
-    # lon = nx.get_node_attributes(G, 'x').values()
-    # print(max(lat), max(lon))
-    # print(min(lat), min(lon))
+    G = graph_from_address(ADDRESS, DIST)
 
-    for _ in range(ITERATIONS):
-        # CUSTOMERS = random.randint(1, TRUCKS * TRUCK_CAPACITY)
-        warehouse, customers, remaining_nodes = assign_nodes(G, CUSTOMERS)
+    nodes = list(G.nodes())
+    warehouse = random.choice(nodes)
+    customers = random.sample(nodes, CUSTOMERS)
 
-        # nonrouting_nodes = customers.copy()
-        # nonrouting_nodes.append(warehouse)
-        # K, routes = road_network_to_complete_graph(G, nonrouting_nodes, 'length')
-        # nx.draw(K)
-        # plt.show()
+    routes = pars(G, warehouse, customers, TRUCKS, CAPACITY, algo)
 
-        routes = pars(G, warehouse, customers, TRUCKS, TRUCK_CAPACITY)
-        total_distance = path_weight_sum(G, routes)
-        stats = (ADDRESS, DISTANCE, CUSTOMERS, TRUCKS, TRUCK_CAPACITY, total_distance / 1000)
-        output_data.append(stats)
-        print(stats)
+    total = path_weight_sum(G, routes)
+    print("Total distance:", total)
 
-        if SHOW_ROUTES or SAVE_ROUTES:
-            draw_routes(G, routes, customers, warehouse, SHOW_ROUTES, SAVE_ROUTES)
+    colors = [
+        "red", "blue", "green", "orange", "purple",
+        "cyan", "magenta", "yellow", "lime", "pink"
+    ]
 
-    if WRITE_TO_FILE:
-        with open('output.tsv', 'w', newline='', encoding='utf-8') as output_file:
-            writer = csv.writer(output_file, delimiter='\t')
-            writer.writerows(output_data)
+    for i, route in enumerate(routes):
+        color = colors[i % len(colors)]
+        draw_single_route(G, route, customers, warehouse, f"{algo}_route_{i}", color)
 
-if __name__ == '__main__':
+    draw_routes(G, routes, customers, warehouse, f"{algo}_final")
+
+
+if __name__ == "__main__":
     main()

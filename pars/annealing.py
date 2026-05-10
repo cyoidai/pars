@@ -1,8 +1,8 @@
 import copy
+import math
 import random
 from typing import Any, Callable
 import networkx as nx
-import math
 
 
 class State:

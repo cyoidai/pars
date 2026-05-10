@@ -2,7 +2,9 @@
 Package assignment and routing system (PARS)
 """
 
+from .aco import AntColonyOptimization
 from .annealing import SimulatedAnnealing
+from .ga import GeneticAlgorithm
 from .utils import (
     euclidean_distance,
     expand_route,

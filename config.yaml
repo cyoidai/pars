@@ -1,0 +1,30 @@
+# Environment Settings
+env_params:
+  mode: "random"              # OPTIONS: "random" or "manual"
+  size: 10
+  extra_edges: 8
+  seed: 4235
+  required_cities: [2, 5, 4, 9]  # Only used if mode is "random"
+
+# Brain Architecture (Neurons)
+network_arch:
+  num_neurons: 128
+  num_layers: 2
+
+# PPO Hyperparameters
+ppo_params:
+  policy: "MultiInputPolicy"
+  learning_rate: 0.0003
+  n_steps: 2048
+  batch_size: 64
+  n_epochs: 10
+  gamma: 0.99
+  verbose: 1
+
+# Training Schedule
+train_params:
+  total_timesteps: 100000
+  num_cpu: 8
+  save_path: "ppo_tsp_model"
+  log_dir: "./logs/"
+  use_tensorboard: false      # Set to true if you install tensorboard

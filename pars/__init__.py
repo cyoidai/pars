@@ -6,6 +6,7 @@ from .aco import AntColonyOptimization
 from .annealing import SimulatedAnnealing
 from .ga import GeneticAlgorithm
 from .nn import NearestNeighbor
+from .rl import ReinforcementLearningTSP
 from .utils import (
     assign_nodes,
     cluster_graph_sweep,

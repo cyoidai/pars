@@ -6,17 +6,25 @@
 \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
 \usepackage{fontspec}
-\setmainfont{Times New Roman}
+\setromanfont{Times New Roman}
+\setsansfont{Times New Roman}
+\setmathrm{CMUSerif}
+\setboldmathrm{CMUSerif}
 \usepackage[inline]{enumitem}
-\usepackage[skip,indent]{parskip}
+\usepackage[skip]{parskip}
 
 \usepackage{cite}
 \usepackage{amsmath,amssymb,amsfonts}
 \usepackage{algorithmic}
 \usepackage{algorithm}
 \usepackage{graphicx}
+\graphicspath{
+    {static}
+    {../data}
+}
 \usepackage{textcomp}
 \usepackage{xcolor}
+\usepackage{siunitx}
 \def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08em
     T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
 
@@ -51,18 +59,16 @@
 \maketitle
 
 \begin{abstract}
-    The modern logistics and transportation systems face their primary challenge through the need to establish effective delivery routing methods. Businesses need to deliver packages to different locations while they work to decrease their travel distance and fuel usage and their time needed for deliveries. The research investigates the Vehicle Routing Problem (VRP) which builds upon the Traveling Salesman Problem (TSP) through its need to operate multiple delivery vehicles at different locations while following specific operational rules.
+    This paper investigates the capacitated vehicle routing problem (CVRP) using real-world road network information. CVRP is a type of vehicle routing problem (VRP), which itself is a generalization of the well-known traveling salesman problem (TSP).
 
-    We propose creating an algorithmic routing systems using both classical and modern artificial intelligence methods and techniques through which we will assign packages to delivery trucks and establish delivery routes that represent a city as a weighted graph. We will then evaluate their overall performance with each other with the objective being to minimize the total distance travel while satisfying constraints such as truck capacity and delivery priorities.
+    Our aim is to investigate efficient algorithms for solving the CVRP, notably classical heuristics such as nearest neighbor and sweep algorithm, along with metaheuristic solutions such as simulated annealing.
 \end{abstract}
 
 \begin{IEEEkeywords}
-    artificial intelligence, traveling salesman problem, vehicle routing problem, route optimization, logistics optimization, nearest-neighbor algorithm, reinforcement learning, gymnasium.
+    vehicle routing problem, traveling salesman problem, artificial intelligence, route optimization, nearest neighbor heuristic, simulated annealing, ant colony optimization.
 \end{IEEEkeywords}
 
-\section{Proposal}
-
-\subsection{Introduction}
+\section{Background}
 
 The growing popularity of online shopping together with instant delivery services has created a greater need for effective transportation and logistics operations. Amazon and FedEx and UPS must find ways to transport numerous packages each day while controlling their operational expenses and fuel usage and delivery speed. Companies need effective route planning solutions because it helps them achieve their business goals while satisfying customer needs.
 
@@ -88,7 +94,39 @@ All-in-all this reinforcement learning approach works well, beating many traditi
 
 The field has progressed, but it still faces difficulties because researchers must balance three essential elements which include solution quality and computational efficiency and real-world operational requirements. This project builds upon prior work by implementing and comparing baseline heuristics and optimization methods to evaluate their effectiveness in minimizing delivery distance and improving routing efficiency.
 
+\section{Proposal}
+
+\subsection{Formal definition}
+
+Formally, we define our problem as follows. Let $G=(V,E)$ be a strongly connected, weighted, directed graph representing a road network where
+
+\begin{itemize}
+    {\parskip=0pt
+    \item vertices represent intersecting roads and/or customers,
+    \item all vertices possess latitude/longitude information $(x,y)$,
+    \item all trucks start and end at a central warehouse described by a node $w\in V$,
+    \item $C\subseteq V\setminus\{w\}$ is the set of customers (destinations) the trucks must visit,
+    \item edges represent the existence of a road connecting two vertices where edge weights describe the distance between the two nodes.}
+\end{itemize}
+
+Let $T$ be a finite set of trucks each with fixed capacity $k$ where the total number of customers a single truck visits cannot exceed $k$. Additionally, ensure $|T|k\geq|C|$ to ensure all customers are reachable in a single round (i.e. a truck doesn't have to return back to the warehouse, refill, then go back out again).
+
+We define function $\mathrm{PARS}(G,w,C,T,k)$ which outputs a mapping $T\to\{(w,\dots,w)\subseteq V,\dots\}$ which describes the route of each truck starting at $w$ and ending at $w$. The goal of this function is to minimize the total distance traveled, the sum of edge weights, across all trucks.
+
 \subsection{Datasets}
+
+Real-world road network information will be obtained via OpenStreetMap using the Python module \verb|osmnx|. Given a central address and a radius, we can obtain a road network graph to test our algorithms on. For our purposes, we will use
+
+\begin{enumerate}
+    {\parskip=0pt
+    \item 1400 Washington Ave, Albany, NY 12222,
+    \item 20 W 34th St., New York, NY 10001,
+    \item 1600 Pennsylvania Ave NW, Washington, DC 20500,
+    \item 633 W 5th St, Los Angeles, CA 90071, and
+    \item London SW1A 0AA, United Kingdom}
+\end{enumerate}
+
+for central locations along with a radius of \qty{10}{\km}. This outputs a graph forming a \qty{20}{\km}\times\qty{20}{\km} square around the central address. To ensure routing between any pair of nodes, we take the subgraph of this graph that contains the largest strongly connected component.
 
 The project develops its delivery system through the creation of a simulated delivery dataset which serves as its main data source. We use synthetic data creation to evaluate our routing algorithms through both controlled testing and actual delivery scenario simulations. For the purposes of this paper, we will assume all graphs are connected, meaning there always exists some path from every node to every other node; and undirected, meaning a truck can travel both ways down a road.
 
@@ -126,7 +164,23 @@ We will create algorithmic search algorithms like A* and the like to compare wit
 
 \subsection{Evaluation}
 
-The main metric we'll use to compare against is overall distance traveled by all delivery trucks. For the classical AI algorithm this is simply the sum of all paths produced by each truck. A minimal total distance traveled is desirable.
+All evaluations in this presentation were performed on a $\qty{20}{\km}\times\qty{20}{\km}$ map centered at the following addresses:
+
+\begin{itemize}
+    \item 1400 Washington Ave, Albany, NY 12222
+    \item 1901 W Madison St, Chicago, IL 60612
+    \item 1325 Pearl St, Boulder, CO 80302
+\end{itemize}
+
+Note that this does not imply the warehouse is located at the university, just that the map is centered there.
+
+Each CVRP instance is generated by first randomly picking a central warehouse location $w\in V$ and then randomly sampling customer locations of the remaining vertices from the map, $C\subseteq V\setminus\{w\}$.
+
+Additionally, each instance features $|T|=10$ trucks, each with a capacity of $k=10$, and the number of customers $|C|\in[1,100]$ is varied randomly over 250 iterations.
+
+PARS is then executed on each instance and the total distance traveled across all trucks is recorded for each instance.
+
+The main metric we'll use to compare against is total distance traveled by all delivery trucks. For the classical AI algorithm this is simply the sum of all paths produced by each truck. A minimal total distance traveled is desirable.
 
 The performance of the AI will be evaluated by the total amount of points at the end. The points for reinforcement learning AI at the end will be compared to the algorithmic AI. This is to prevent situations where the AI is on a bad map but was punished for being in one when it has no choice over it. The algorithmic AI can be helpful in finding out how close or far reinforcement learning AI is to the algorithmic AI. Comparing the points between the reinforcement learning AI and algorithmic AI, more points for reinforcement learning AI mean better results as this would mean the AI has learned how to path the destinations well.
 
@@ -154,7 +208,9 @@ Here, the weeks are starting from the first proposal submission date.
 
 \subsection{Expected challenges}
 
-Generating sufficient graphs for testing will be of concern. We aim to be able to generate city-like graphs on the fly and quickly iterate tests on different graphs fast and quickly. However, given the assumptions made before we need to ensure the graph is connected, as we cannot have packages that cannot be delivered. In addition, we want graphs that resemble a real city. For example, there should not be two nodes on far ends of the graph that share an edge. One solution to this is to generate a graph whereby nodes are randomly placed and edges are made based on a progressive probability function. In other words, edge probability decreases as distance between nodes increases. This still does not address disconnected graphs from forming, however we could run an algorithm to determine graph connectedness and either discard the graph's use or remove smaller disconnected graphs.
+From a graph theory perspective, the input to a TSP/VRP is generally a complete graph where nodes are cities and edge weights are distances. Notably, a salesman, or in the case of VRP, a vehicle, is able to route from any city to any other city using pre-calculated distance weights. Since we aim to use real-world road network data, our graph is obviously not a complete graph. A solution to this is to convert the road network graph into a complete graph. We can do this by creating a new graph containing only the customer nodes along with the warehouse node. We then calculate the path, and in turn the distance, between any two pair of nodes using A* search. This becomes the weights of the complete graph.
+
+% Generating sufficient graphs for testing will be of concern. We aim to be able to generate city-like graphs on the fly and quickly iterate tests on different graphs fast and quickly. However, given the assumptions made before we need to ensure the graph is connected, as we cannot have packages that cannot be delivered. In addition, we want graphs that resemble a real city. For example, there should not be two nodes on far ends of the graph that share an edge. One solution to this is to generate a graph whereby nodes are randomly placed and edges are made based on a progressive probability function. In other words, edge probability decreases as distance between nodes increases. This still does not address disconnected graphs from forming, however we could run an algorithm to determine graph connectedness and either discard the graph's use or remove smaller disconnected graphs.
 
 Turning a traditional TSP into a VRP is difficult due to the existence of multiple agents. We expect to first try to partition up a single TSP, partition its path up and distribute it among multiple delivery trucks ensuring no truck carries too many packages. However, an excess in packages is possible.
 
@@ -165,6 +221,34 @@ The second challenge requires organizations to manage vehicle capacity restricti
 The system, which needs to function correctly in various delivery situations, presents a difficult challenge for testing its operational reliability. The routing performance gets affected by three factors, which include changes in delivery locations and variations in demand sizes and vehicle capacity. The system requires testing through various simulated scenarios to achieve both robustness and steady performance.
 
 Balancing the reward and punishment for reinforcement learning AI is one of the expected challenges. If the punishment is too strong and the reward is too weak then the AI would learn to stay still as moving around will be too costly. Another is reverse, if the cost is too weak and reward is too high, the AI could learn to ignore the cost of the path and go straight as reaching the reward fast as possible would lead to higher score. The only way to deal with this problem seems to be trying out different point systems and checking if the resulting AI is behaving as desired.
+
+\section{Establishing a baseline}
+
+A single vehicle routing problem can be thought of as a multi-agent traveling salesman problem. Solving this would be a lot easier if we could decompose a VRP into multiple TSPs we could solve individually, and moreover, in parallel. We can achieve this by finding a way to partition the set of customers $C$ while also adhering to the truck capacity constraint $k$. Doing this reduces the complexity of our problem greatly.
+
+\subsection{Sweep algorithm}
+
+Sweep algorithm is a rather primitive yet effective method for partitioning customers. Conceptually, we draw a ray out from the central warehouse in some direction and ``sweep'' that ray around a full 360\textsuperscript{\circ}. As our ray sweeps around, we will pass over customers. When we hit a customer we allocate that customer to a truck, say truck 1. Once that truck is filled, we move onto allocating customers to truck 2, truck 3, and so on. In practice, we do this by calculating 2-argument arctangent of each customer,
+\[
+    \theta=\mathrm{atan2}(\text{lat},\text{lon}),
+\]
+sort all customers by this result, then allocate customers as mentioned above. Sweep algorithm will be used throughout the rest of the paper as our partitioning method of choice.
+
+\subsection{Abstracting away real-world data}
+
+In general, VRPs and TSPs do not consider the actual routing between customers. In other words, they simply assume any customer can visit any other customer with some pre-calculated distance. Since we are working with real road-network information we need a way to abstract away all the individual nodes and edges a truck must traverse and represent them as a single distance. In graph theory terms, we need to transform the sparse graph that represents the road-network information into a complete graph containing just the warehouse, relevant customers, and the distances between them.
+
+We do this by computing the shortest path between each pair of so-called ``non-routing nodes,'' which is $C\cup\{w\}$. By executing Dijkstra's single-source shortest path (SSSP) algorithm from each non-routing node, we can find the shortest paths and use those as the distances in our complete graph. In our implementation, we represent this as a complete graph $K$, however, this is also commonly referred to as the ``distance matrix'' whereby each entry $(i,j)$ in the matrix represents the shortest distance between nodes $i$ and $j$.
+
+When we execute Dijkstra's SSSP, we ensure to save the results to make sure we can rebuild the actual route on the sparse graph once the TSP optimizer has determined the optimal order of visiting the customers.
+
+\section{Data}
+
+\begin{figure*}[!t]
+    \centering
+    \includegraphics[width=\linewidth]{albany100/comparison.png}
+    \caption{400 customers across 4 trucks with 100packages/truck(max. 100 customers/TSP)}
+\end{figure*}
 
 \bibliographystyle{IEEEtran}
 \bibliography{paper}

@@ -59,13 +59,11 @@
 \maketitle
 
 \begin{abstract}
-    This paper investigates the capacitated vehicle routing problem (CVRP) using real-world road network information. CVRP is a type of vehicle routing problem (VRP), which itself is a generalization of the well-known traveling salesman problem (TSP).
-
-    Our aim is to investigate efficient algorithms for solving the CVRP, notably classical heuristics such as nearest neighbor and sweep algorithm, along with metaheuristic solutions such as simulated annealing.
+    This paper investigates the capacitated vehicle routing problem (CVRP) using real-world road network information. CVRP is a type of vehicle routing problem (VRP), which itself is a generalization of the well-known traveling salesman problem (TSP). Our aim is to investigate efficient algorithms for solving the CVRP, notably classical heuristics such as nearest neighbor and sweep algorithm, metaheuristic solutions, and nontraditional techniques like reinforcement learning.
 \end{abstract}
 
 \begin{IEEEkeywords}
-    vehicle routing problem, traveling salesman problem, artificial intelligence, route optimization, nearest neighbor heuristic, simulated annealing, ant colony optimization.
+    vehicle routing problem, traveling salesman problem, artificial intelligence, route optimization, nearest neighbor heuristic, simulated annealing, ant colony optimization, genetic algorithm.
 \end{IEEEkeywords}
 
 \section{Background}
@@ -115,30 +113,7 @@ We define function $\mathrm{PARS}(G,w,C,T,k)$ which outputs a mapping $T\to\{(w,
 
 \subsection{Datasets}
 
-Real-world road network information will be obtained via OpenStreetMap using the Python module \verb|osmnx|. Given a central address and a radius, we can obtain a road network graph to test our algorithms on. For our purposes, we will use
-
-\begin{enumerate}
-    {\parskip=0pt
-    \item 1400 Washington Ave, Albany, NY 12222,
-    \item 20 W 34th St., New York, NY 10001,
-    \item 1600 Pennsylvania Ave NW, Washington, DC 20500,
-    \item 633 W 5th St, Los Angeles, CA 90071, and
-    \item London SW1A 0AA, United Kingdom}
-\end{enumerate}
-
-for central locations along with a radius of \qty{10}{\km}. This outputs a graph forming a \qty{20}{\km}\times\qty{20}{\km} square around the central address. To ensure routing between any pair of nodes, we take the subgraph of this graph that contains the largest strongly connected component.
-
-The project develops its delivery system through the creation of a simulated delivery dataset which serves as its main data source. We use synthetic data creation to evaluate our routing algorithms through both controlled testing and actual delivery scenario simulations. For the purposes of this paper, we will assume all graphs are connected, meaning there always exists some path from every node to every other node; and undirected, meaning a truck can travel both ways down a road.
-
-The road network is represented by an undirected, weighted graph where nodes indicate intersections or destinations, edges indicate the existence of a road between two nodes, and edge weights represent the distance between two nodes.
-
-Delivery locations exist as points that appear on a two-dimensional grid system, represented as $(x,y)$ coordinates. These represent customer delivery addresses.
-
-The main distribution center, or simple depot, functions as the storage facility for packages starting out and delivery trucks. All trucks begin and finish their routes from this location. The location exists at a specific fixed point.
-
-The Euclidean distance measurement determines all location distances. These measurements are reflected in the graph's edge weights.
-
-All vehicles have a fixed carrying capacity and all vehicles operate from the depot to complete their missions.
+Real-world road network information is obtained via OpenStreetMap using the Python module \verb|osmnx|. Given a central address and a radius, we can obtain a road network graph on which we will use to test our algorithms on. The road network is represented by an directed, weighted multi-graph where nodes indicate intersections or destinations, edges indicate the existence of a road between two nodes, and edge weights represent the distance between two nodes. Little modification to te data is made, however, to ensure routing between any pair of nodes, we take the subgraph of this graph that contains the largest strongly connected component.
 
 \subsection{Methods and approach}
 
@@ -232,7 +207,7 @@ Sweep algorithm is a rather primitive yet effective method for partitioning cust
 \[
     \theta=\mathrm{atan2}(\text{lat},\text{lon}),
 \]
-sort all customers by this result, then allocate customers as mentioned above. Sweep algorithm will be used throughout the rest of the paper as our partitioning method of choice.
+sort all customers by this result, then allocate customers as mentioned above. A notable takeaway is that sweep always partitions to minimize number of partitions, while ensuring that each partition is of maximal size. This means a single truck will be used to serve as many customers as possible, rather than using multiple trucks with fewer customers each. Sweep algorithm will be used throughout the rest of the paper as our partitioning method of choice.
 
 \subsection{Abstracting away real-world data}
 
@@ -242,13 +217,117 @@ We do this by computing the shortest path between each pair of so-called ``non-r
 
 When we execute Dijkstra's SSSP, we ensure to save the results to make sure we can rebuild the actual route on the sparse graph once the TSP optimizer has determined the optimal order of visiting the customers.
 
+\subsection{Nearest neighbor}
+
+Nearest neighbor (NN) heuristic is a simple yet effective method for solving TSPs. Since we possess latitude and longitude information for each customer, we can use this to determine the nearest neighbor of a given customer. This will serve as our base heuristic. The algorithm is as follows. We start at the warehouse, then we visit the nearest unvisited customer, then we repeat this process until all customers have been visited, and finally we return to the warehouse. This is a greedy algorithm that makes locally optimal choices at each step with the hope of finding a global optimum. However, it does not guarantee an optimal solution and can sometimes produce suboptimal routes.
+
+\section{Simulated annealing}
+
+Simulated annealing is a randomized algorithm for approximating the global optimum of some function. It emulates the cooling of hot metal whereby early on the algorithm accepts longer routes to ``see where they might go''. Though, as we cool, we become more conservative. This technique is ideal for solving individual TSPs.
+
+\subsection{Obtaining a new state}
+
+Simulated annealing revolves around trying to optimize some state $s$. In our case the state is simply the route a single truck takes. For example,
+\[
+    s=(w,c_1,c_2,c_3,w)
+\]
+where $w$ is the central warehouse and $c_i\in C$ denotes customers.
+
+Optimization is performed by obtaining a new state $s_\text{new}$ which is generated by slightly modifying the existing state, then comparing it against the existing best state.
+
+In our case, we generate our new state by randomly modifying the order in which a truck will visit each customer. We do this simply by picking two customers at random and swapping their order in $s$.
+
+For example, here's a new state where the truck now visits the second customer first then the first customer second.
+\[
+    s_\text{new}=(w,c_2,c_1,c_3,w)
+\]
+
+\subsection{Evaluation of a state and temperature}
+
+The energy of a state, denoted $E(s)\in\mathbb{R}$, is how we quantify the quality of a solution. This is the value we want to either minimize or maximize. In our case, we define $E(s)$ to be the total distance a truck will have to travel.
+
+To ensure we don't get stuck in local optimums, we introduce the concept of temperature. This value starts high and decays over time, by decay rate $u$. This temperature value ensures that we are more likely to accept worse solutions early on in the algorithm, but as we cool down, we become more conservative and less likely to accept worse solutions.
+
+In our case, we use an initial temperature of $T=10,000$ with a decay rate of $u=0.995$.
+
+\subsection{Probability acceptance function}
+
+To bring this all together we introduce the probability acceptance function, denoted $P(e,e_{new},T)\in[0,1]$. This is the probability of making a transition from the current state $s$ to a new candidate state $s_\text{new}$. In our case we define $P$ as follows
+\[
+    P(e,e_\text{new},T)=\begin{cases}
+        1 & \text{if }e_\text{new}<e \\
+        \displaystyle\exp\left(\frac{-(e_\text{new}-e)}{T}\right) & \text{otherwise}
+    \end{cases}
+\]
+This probability acceptance function is key as this is what compares the quality of a new solution with the algorithm's current temperature. Here we see that if we find a more optimal solution (first condition), we always use that instead, however, if we find a less optimal solution (second condition), we may switch to it depending on how much better it is, $e_\text{new}-e$, and what the current temperature $T$ is.
+
+\section{Ant colony optimization}
+
+\section{Genetic algorithm}
+
+\section{Reinforcement learning}
+
+The project utilizes Gymnasium to construct the training environment and Stable-Baselines3 to implement the reinforcement learning algorithms. The environment is modeled as a graph where an adjacency matrix defines the connections and the "cost" (travel weight) between nodes.
+
+\paragraph{Reward architecture} The agent's objective is governed by a structured reward function designed to incentivize both task completion and path efficiency. This prevents the AI from wandering aimlessly:
+
+\begin{itemize}
+    \item Target Achievement (+20): Awarded for each required destination node successfully reached.
+    \item Sequence Completion (+25): A bonus granted once the entire checklist of required nodes is fulfilled.
+    \item Mission Success (+50): A terminal reward triggered when the agent returns "home" after visiting all required destinations.
+    \item Efficiency Penalty (-Cost): A negative reward (the weight from the adjacency matrix) is applied at every turn to discourage redundant movement.
+\end{itemize}
+
+\paragraph{State--value function} This equation defines the "worth" of the agent's current situation. It calculates the total reward the AI expects to collect from its current turn until the very end of the trip.
+\[
+    V(s) = \mathbb{E} \left[ \sum_{k=0}^{K} \gamma^k R_{k} \right]
+\]
+where
+
+$V(s)$ (The Value): The AI's "confidence score." If the agent is at a node and has nearly finished its checklist, $V(s)$ will be high because it knows it is close to the $+50$ point home bonus.
+
+$\mathbb{E}[\dots]$ (The Expectation): During training, the AI tries many different paths. This represents the average result of those attempts—essentially what the AI "expects" to happen based on its experience.
+
+$\sum_{k=0}^{K}$ (Sum of Turns): The cumulative total of points gathered from the current turn ($k=0$) until the final turn ($K$) when the robot returns home.
+
+$\gamma^k$ (The Discount Factor): A "patience" multiplier. Rewards that happen many turns in the future are multiplied by a small fraction (e.g., $0.99^{turn}$). This forces the AI to be efficient; if it takes too many turns, the value of the reward "fades," making shorter paths more attractive.
+
+$R_k$ (The Reward): The specific points or cost penalties received during each specific turn.
+
+\paragraph{Bellman optimality equation} While the first equation tells the AI how good its current spot is, the Bellman Equation is the recursive logic it uses to make a decision. It looks one turn into the future to find the best possible move.
+\[
+    V^*(s) = \max_{a \in A} \left[ R(s, a) + \gamma V^*(s') \right]
+\]
+where $V^*(s)$ is the "Best Possible Value" for the current node. The AI constantly updates this number to make its memory as accurate as possible.
+
+$\max_{a \in A}$ (The Decision): The AI looks at all available nodes it can move to. It calculates the potential value of every possible move and picks the one that results in the Maximum total score.
+
+$R(s, a)$ (Immediate Feedback): The points or costs the AI gets immediately for making a move. For example, moving to the next city might cost $-10$ points.
+
+$\gamma V^*(s')$ (Future Estimate): The AI's estimate of how "good" the next node ($s'$) will be. Even if a move is expensive, the AI will take it if the next node has a very high future value.
+
 \section{Data}
 
-\begin{figure*}[!t]
-    \centering
-    \includegraphics[width=\linewidth]{albany100/comparison.png}
-    \caption{400 customers across 4 trucks with 100packages/truck(max. 100 customers/TSP)}
-\end{figure*}
+\section{Conclusion}
+
+For very small TSP sizes, all algorithms perform better than our baseline with most finding the likely optimal solution.
+However, as the TSP size is increased, we see a significance divergence.
+
+ACO performed significantly better than our NN baseline.
+
+SA and GA performed worse than our NN baseline.
+
+We noted that once TSP size increased past approximately 10--15, SA and GA perform worse than NN.
+
+The randomized nature of SA and GA is likely the reason they performed so poorly on large TSP sizes.
+
+Our implementations of SA and GA are very primitive, and in-practice would require further optimization to out-preform the baseline.
+
+% \begin{figure*}[!t]
+%     \centering
+%     \includegraphics[width=\linewidth]{albany100/comparison.png}
+%     \caption{400 customers across 4 trucks with 100packages/truck(max. 100 customers/TSP)}
+% \end{figure*}
 
 \bibliographystyle{IEEEtran}
 \bibliography{paper}

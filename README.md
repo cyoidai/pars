@@ -14,13 +14,13 @@ Install necessary packages
 pip install stable-baselines3 gymnasium pyyaml networkx matplotlib numpy tensorboard osmnx sb3_contrib
 ```
 
-The following shows PARS executed on a 20km^2 map of Albany, NY centered at University of Albany, SUNY using nearest neighbor heuristic. Default parameters are 32 customers, 4 trucks, and a truck capacity of 8.
+The following command executes PARS on a 20km^2 map of Albany, NY centered at University of Albany, SUNY using nearest neighbor heuristic. Default parameters are 32 customers, 4 trucks, and a truck capacity of 8.
 
 ```bash
 python main.py -a nn '1400 Washington Ave, Albany, NY 12222'
 ```
 
-Expected output (numbers will vary)
+An example output is shown below. Take note of the final number, this number is the total distance traveled by all trucks in kilometers.
 
 ```text
 ('address', 'distance', 'customers', 'trucks', 'truck_capacity', 'algorithm', 'total_distance')

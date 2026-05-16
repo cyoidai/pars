@@ -22,6 +22,7 @@
     {static}
     {../data}
 }
+\usepackage{subfig}
 \usepackage{textcomp}
 \usepackage{xcolor}
 \usepackage{siunitx}
@@ -66,15 +67,15 @@
     vehicle routing problem, traveling salesman problem, artificial intelligence, route optimization, nearest neighbor heuristic, simulated annealing, ant colony optimization, genetic algorithm.
 \end{IEEEkeywords}
 
-\section{Background}
+\section{Motivation, background, and problem definition}
 
-The growing popularity of online shopping together with instant delivery services has created a greater need for effective transportation and logistics operations. Amazon and FedEx and UPS must find ways to transport numerous packages each day while controlling their operational expenses and fuel usage and delivery speed. Companies need effective route planning solutions because it helps them achieve their business goals while satisfying customer needs.
+% The growing popularity of online shopping together with instant delivery services has created a greater need for effective transportation and logistics operations. Amazon and FedEx and UPS must find ways to transport numerous packages each day while controlling their operational expenses and fuel usage and delivery speed. Companies need effective route planning solutions because it helps them achieve their business goals while satisfying customer needs.
 
-The vehicle routing problem (VRP) is a critical optimization problem that logistics operations must solve. The VRP problem extends the traveling salesman problem (TSP) by requiring multiple vehicles to deliver shipments among multiple locations while following specific operational rules for vehicle capacity and route restrictions and delivery assessments. It can be thought of as a multi-agent version of the traveling salesman problem (TSP). To improve intuitiveness, we will model this as a problem of delivering packages to address where agents are delivery trucks that must traverse a city. The guiding problem is, given some number of packages and some number of delivery trucks, identify an efficient routing for these trucks that minimizes the total distance traveled by all trucks combined.
+The capacitated vehicle routing problem (CVRP) is a critical optimization problem that logistics operations must solve. The CVRP is a type of vehicle routing problem (VRP), which itself is a generalization of the well-known traveling salesman problem (TSP). The CVRP extends the TSP by requiring multiple vehicles to deliver shipments among multiple locations while following specific operational rules for vehicle capacity. It can be thought of as a multi-agent version of the traveling salesman problem (TSP) combined with constraint satisfaction. To improve intuitiveness, we will model this as a problem of delivering packages to address where agents are delivery trucks that must traverse a city. The guiding problem is, given some number of packages and some number of delivery trucks each with a fixed capacity, identify an efficient routing for these trucks that minimizes the total distance traveled by all trucks combined.
 
 The VRP is classified as an NP-hard problem. As such, the development of near-optimal solutions involves the implementation of heuristic and metaheuristic techniques because they offer effective solution methods in a reasonable amount of time. Overall, this problem is very much important as it underpins the real-world nature of any logistical operation. While we're using package delivery for this, also consider pickers or stockers in a warehouse; or the reverse, school bus routing, and waste pickup.
 
-This project develops a package assignment and routing system that uses city modeling to create a weighted graph which shows delivery locations as nodes and distance between locations as edges. Our project objectives are to compare algorithmic pathing and a reinforcement learning AI.
+This project develops a package assignment and routing system that uses real-world road network information to show delivery locations as nodes and distance between locations as edges. Our project objectives are to compare traditional algorithmic optimization and a reinforcement learning AI.
 
 Routing systems that work efficiently not only enhance logistics efficiency but also help the environment by decreasing both fuel usage and greenhouse gas emissions. The delivery networks are becoming bigger as time goes on.
 
@@ -91,8 +92,6 @@ In experimentation, reinforcement learning pre-training was conducted. This is d
 All-in-all this reinforcement learning approach works well, beating many traditional algorithms, and scales well while still maintaining an answer close to the optimal solution. On the other hand, algorithms like Concorde are still more accurate and faster. However, from a wider perspective such an RL approach has value as it can be applied to many other similar problems, not just that of a TSP, which very efficient algorithms specifically designed for TSP cannot achieve.
 
 The field has progressed, but it still faces difficulties because researchers must balance three essential elements which include solution quality and computational efficiency and real-world operational requirements. This project builds upon prior work by implementing and comparing baseline heuristics and optimization methods to evaluate their effectiveness in minimizing delivery distance and improving routing efficiency.
-
-\section{Proposal}
 
 \subsection{Formal definition}
 
@@ -111,75 +110,49 @@ Let $T$ be a finite set of trucks each with fixed capacity $k$ where the total n
 
 We define function $\mathrm{PARS}(G,w,C,T,k)$ which outputs a mapping $T\to\{(w,\dots,w)\subseteq V,\dots\}$ which describes the route of each truck starting at $w$ and ending at $w$. The goal of this function is to minimize the total distance traveled, the sum of edge weights, across all trucks.
 
-\subsection{Datasets}
+\section{Methods and methodology}
 
-Real-world road network information is obtained via OpenStreetMap using the Python module \verb|osmnx|. Given a central address and a radius, we can obtain a road network graph on which we will use to test our algorithms on. The road network is represented by an directed, weighted multi-graph where nodes indicate intersections or destinations, edges indicate the existence of a road between two nodes, and edge weights represent the distance between two nodes. Little modification to te data is made, however, to ensure routing between any pair of nodes, we take the subgraph of this graph that contains the largest strongly connected component.
+\subsection{Dataset}
 
-\subsection{Methods and approach}
+Real-world road network information is obtained via OpenStreetMap using the Python module \verb|osmnx|. Given a central address and a radius, we can obtain a road network graph on which we will use to test our algorithms on. The road network is represented by a directed, weighted multi-graph where nodes indicate intersections or destinations, edges indicate the existence of a road between two nodes, and edge weights represent the distance between two nodes. Little modification to te data is made, however, to ensure routing between any pair of nodes, we take the subgraph of this graph that contains the largest strongly connected component.
 
-For implementation, we'll be implementing in Python using modules like PyTorch, networkx, and matplotlib for visualizations.
+For implementation, we'll be implementing in Python using modules like Stable Baselines3, networkx, and matplotlib for visualizations.
 
-The problem can be more formally described as so. Given some number of parcels, some number of trucks, and a weighted graph where nodes indicate intersections and/or package destinations, edges indicate a viable path between two nodes, edge weights indicate distance between two nodes, each parcel has a single destination, each truck can only carry a certain number of parcels, and that every truck starts and ends at some node, devise a route for each truck that minimizes the total distance traveled by all trucks.
+% The problem can be less formally described as so. Given some number of parcels, some number of trucks, and a weighted graph where nodes indicate intersections and/or package destinations, edges indicate a viable path between two nodes, edge weights indicate distance between two nodes, each parcel has a single destination, each truck can only carry a certain number of parcels, and that every truck starts and ends at some node, devise a route for each truck that minimizes the total distance traveled by all trucks.
 
 Due to the computational complexity of solving such a problem, we won't brute force the solution to use as a baseline but rather use well-known classical algorithms to compare off of like the nearest-neighbor heuristic. With this we will attempt to analyze and improve upon these algorithms using various classical AI techniques.
 
-We'll start with solving a single TSP, scaling this up to a VRP through partitioning and ensuring constraint satisfaction. Then we'll move to further optimizations of the algorithm, comparing it to existing iterations as well as addressing the advantages and disadvantages of changes. This will likely take up most of the time available, however, we will look into training an AI to solve such a problem through reinforcement learning and pathfinding.
+We'll start by looking into different approaches to decomposing a VRP into smaller TSP instances like partitioning while ensuring constraint satisfaction. Then we'll move to further optimizations of the algorithm, comparing it to existing iterations as well as addressing the advantages and disadvantages of changes. This will likely take up most of the time available, however, we will look into training an AI to solve such a problem through reinforcement learning and pathfinding.
 
 The nearest-neighbor heuristic serves as the baseline solution to create initial delivery routes. The method requires vehicles to start their routes from the depot and drive to the nearest delivery point which has not yet been visited. The vehicle operates until it reaches its full capacity then it returns to the depot to start processing the upcoming delivery points. The nearest-neighbor method provides a fast computational process which requires simple implementation but it generates inferior routing results because it selects routes through nearby locations without considering total route performance \cite{Golden2008}.
 
 For training the reinforcement learning model, we'll establish that traveling to different areas of the map will cost a certain amount of points. When reaching the goal, the AI will be rewarded with more points. This will encourage the AI to go through paths with the least cost and get to the goal. The points system needs to be well adjusted so that the AI doesn't learn to just stay still.
 
-The training map will start out small so that AI can quickly learn and roam around less before reaching the goal. As the training progresses, a larger map will be implemented.
-
-We will accomplish this by utilizing the code from https://gymnasium.farama.org/. This is a reinforcement learning AI trainer that will have the AI carry out action in an environment and be punished and rewarded accordingly to the actions of the AI.
-
-Later, we can also implement areas with high-cost fluctuations so that the AI learns risk management. Similar to simulating a highway during rush hour and not.
+The training map will start out small so that AI can quickly learn and roam around less before reaching the goal. As the training progresses, a larger map will be implemented. We will accomplish this by utilizing the code from https://gymnasium.farama.org/. This is a reinforcement learning AI trainer that will have the AI carry out action in an environment and be punished and rewarded accordingly to the actions of the AI. Later, we can also implement areas with high-cost fluctuations so that the AI learns risk management. Similar to simulating a highway during rush hour and not.
 
 We will create algorithmic search algorithms like A* and the like to compare with the reinforcement learning AI. This algorithmic AI can be the measurement of how well reinforced learning AI has learned to find the path to the delivery site and how optimal the path it found is. This will remove bad luck from the map's path cost naturally worse than another map.
 
-\subsection{Evaluation}
+% \subsection{Project plan and timeline}
 
-All evaluations in this presentation were performed on a $\qty{20}{\km}\times\qty{20}{\km}$ map centered at the following addresses:
+% Here, the weeks are starting from the first proposal submission date.
 
-\begin{itemize}
-    \item 1400 Washington Ave, Albany, NY 12222
-    \item 1901 W Madison St, Chicago, IL 60612
-    \item 1325 Pearl St, Boulder, CO 80302
-\end{itemize}
+% \begin{itemize}
+%     \item Week 2: Finalize the method to solve the problem.
 
-Note that this does not imply the warehouse is located at the university, just that the map is centered there.
+%     Lakshay, Mathew, and Young will discuss how to proceed with the implementation of the project in more concrete detail.
+%     \item Week 3: Learn how to code the pathing algorithm or the AI tool.
 
-Each CVRP instance is generated by first randomly picking a central warehouse location $w\in V$ and then randomly sampling customer locations of the remaining vertices from the map, $C\subseteq V\setminus\{w\}$.
+%     Lakshay, Mathew will try to learn how to code the selected algorithmic pathing AI. Young will try to learn how to use the gymnasium code to train reinforcement learning AI.
+%     \item Week 5: Try to create and train the AI.
 
-Additionally, each instance features $|T|=10$ trucks, each with a capacity of $k=10$, and the number of customers $|C|\in[1,100]$ is varied randomly over 250 iterations.
+%     Lakshay, Mathew will try to create the code for the selected algorithmic pathing AI. Young will try to create the gymnasium code to train reinforcement learning AI.
+%     \item Week 6: Compare the algorithmic AI and reinforcement learning AI.
 
-PARS is then executed on each instance and the total distance traveled across all trucks is recorded for each instance.
+%     Lakshay, Mathew, and Young will run the developed AIs and compare the performance of the two AIs.
+%     \item Week 7: Add more variables like fluctuating path value or more obstacles.
 
-The main metric we'll use to compare against is total distance traveled by all delivery trucks. For the classical AI algorithm this is simply the sum of all paths produced by each truck. A minimal total distance traveled is desirable.
-
-The performance of the AI will be evaluated by the total amount of points at the end. The points for reinforcement learning AI at the end will be compared to the algorithmic AI. This is to prevent situations where the AI is on a bad map but was punished for being in one when it has no choice over it. The algorithmic AI can be helpful in finding out how close or far reinforcement learning AI is to the algorithmic AI. Comparing the points between the reinforcement learning AI and algorithmic AI, more points for reinforcement learning AI mean better results as this would mean the AI has learned how to path the destinations well.
-
-\subsection{Project plan and timeline}
-
-Here, the weeks are starting from the first proposal submission date.
-
-\begin{itemize}
-    \item Week 2: Finalize the method to solve the problem.
-
-    Lakshay, Mathew, and Young will discuss how to proceed with the implementation of the project in more concrete detail.
-    \item Week 3: Learn how to code the pathing algorithm or the AI tool.
-
-    Lakshay, Mathew will try to learn how to code the selected algorithmic pathing AI. Young will try to learn how to use the gymnasium code to train reinforcement learning AI.
-    \item Week 5: Try to create and train the AI.
-
-    Lakshay, Mathew will try to create the code for the selected algorithmic pathing AI. Young will try to create the gymnasium code to train reinforcement learning AI.
-    \item Week 6: Compare the algorithmic AI and reinforcement learning AI.
-
-    Lakshay, Mathew, and Young will run the developed AIs and compare the performance of the two AIs.
-    \item Week 7: Add more variables like fluctuating path value or more obstacles.
-
-    Lakshay, Mathew, and Young, more complex, fluid maps will be developed to try to make the AI go through less ideal situations like static maps.
-\end{itemize}
+%     Lakshay, Mathew, and Young, more complex, fluid maps will be developed to try to make the AI go through less ideal situations like static maps.
+% \end{itemize}
 
 \subsection{Expected challenges}
 
@@ -197,19 +170,19 @@ The system, which needs to function correctly in various delivery situations, pr
 
 Balancing the reward and punishment for reinforcement learning AI is one of the expected challenges. If the punishment is too strong and the reward is too weak then the AI would learn to stay still as moving around will be too costly. Another is reverse, if the cost is too weak and reward is too high, the AI could learn to ignore the cost of the path and go straight as reaching the reward fast as possible would lead to higher score. The only way to deal with this problem seems to be trying out different point systems and checking if the resulting AI is behaving as desired.
 
-\section{Establishing a baseline}
+\subsection{Decomposing a VRP into multiple TSPs}
 
 A single vehicle routing problem can be thought of as a multi-agent traveling salesman problem. Solving this would be a lot easier if we could decompose a VRP into multiple TSPs we could solve individually, and moreover, in parallel. We can achieve this by finding a way to partition the set of customers $C$ while also adhering to the truck capacity constraint $k$. Doing this reduces the complexity of our problem greatly.
 
-\subsection{Sweep algorithm}
+\subsubsection{Sweep algorithm}
 
 Sweep algorithm is a rather primitive yet effective method for partitioning customers. Conceptually, we draw a ray out from the central warehouse in some direction and ``sweep'' that ray around a full 360\textsuperscript{\circ}. As our ray sweeps around, we will pass over customers. When we hit a customer we allocate that customer to a truck, say truck 1. Once that truck is filled, we move onto allocating customers to truck 2, truck 3, and so on. In practice, we do this by calculating 2-argument arctangent of each customer,
 \[
     \theta=\mathrm{atan2}(\text{lat},\text{lon}),
 \]
-sort all customers by this result, then allocate customers as mentioned above. A notable takeaway is that sweep always partitions to minimize number of partitions, while ensuring that each partition is of maximal size. This means a single truck will be used to serve as many customers as possible, rather than using multiple trucks with fewer customers each. Sweep algorithm will be used throughout the rest of the paper as our partitioning method of choice.
+sort all customers by this result, then allocate customers as mentioned above. A notable takeaway is that sweep always partitions to minimize the number of partitions, while ensuring that each partition is of maximal size. This means a single truck will be used to serve as many customers as possible, rather than using multiple trucks with fewer customers each. Sweep algorithm will be used throughout the rest of the paper as our partitioning method of choice.
 
-\subsection{Abstracting away real-world data}
+\subsubsection{Abstracting away real-world data}
 
 In general, VRPs and TSPs do not consider the actual routing between customers. In other words, they simply assume any customer can visit any other customer with some pre-calculated distance. Since we are working with real road-network information we need a way to abstract away all the individual nodes and edges a truck must traverse and represent them as a single distance. In graph theory terms, we need to transform the sparse graph that represents the road-network information into a complete graph containing just the warehouse, relevant customers, and the distances between them.
 
@@ -221,11 +194,11 @@ When we execute Dijkstra's SSSP, we ensure to save the results to make sure we c
 
 Nearest neighbor (NN) heuristic is a simple yet effective method for solving TSPs. Since we possess latitude and longitude information for each customer, we can use this to determine the nearest neighbor of a given customer. This will serve as our base heuristic. The algorithm is as follows. We start at the warehouse, then we visit the nearest unvisited customer, then we repeat this process until all customers have been visited, and finally we return to the warehouse. This is a greedy algorithm that makes locally optimal choices at each step with the hope of finding a global optimum. However, it does not guarantee an optimal solution and can sometimes produce suboptimal routes.
 
-\section{Simulated annealing}
+\subsection{Simulated annealing}
 
 Simulated annealing is a randomized algorithm for approximating the global optimum of some function. It emulates the cooling of hot metal whereby early on the algorithm accepts longer routes to ``see where they might go''. Though, as we cool, we become more conservative. This technique is ideal for solving individual TSPs.
 
-\subsection{Obtaining a new state}
+\subsubsection{Obtaining a new state}
 
 Simulated annealing revolves around trying to optimize some state $s$. In our case the state is simply the route a single truck takes. For example,
 \[
@@ -242,7 +215,7 @@ For example, here's a new state where the truck now visits the second customer f
     s_\text{new}=(w,c_2,c_1,c_3,w)
 \]
 
-\subsection{Evaluation of a state and temperature}
+\subsubsection{Evaluation of a state and temperature}
 
 The energy of a state, denoted $E(s)\in\mathbb{R}$, is how we quantify the quality of a solution. This is the value we want to either minimize or maximize. In our case, we define $E(s)$ to be the total distance a truck will have to travel.
 
@@ -250,7 +223,7 @@ To ensure we don't get stuck in local optimums, we introduce the concept of temp
 
 In our case, we use an initial temperature of $T=10,000$ with a decay rate of $u=0.995$.
 
-\subsection{Probability acceptance function}
+\subsubsection{Probability acceptance function}
 
 To bring this all together we introduce the probability acceptance function, denoted $P(e,e_{new},T)\in[0,1]$. This is the probability of making a transition from the current state $s$ to a new candidate state $s_\text{new}$. In our case we define $P$ as follows
 \[
@@ -261,15 +234,41 @@ To bring this all together we introduce the probability acceptance function, den
 \]
 This probability acceptance function is key as this is what compares the quality of a new solution with the algorithm's current temperature. Here we see that if we find a more optimal solution (first condition), we always use that instead, however, if we find a less optimal solution (second condition), we may switch to it depending on how much better it is, $e_\text{new}-e$, and what the current temperature $T$ is.
 
-\section{Ant colony optimization}
+\subsection{Ant colony optimization}
 
-\section{Genetic algorithm}
+Ant Colony Optimization (ACO) functions as an optimization algorithm which bases its operations on natural ant behavior during food searches. The routing system uses artificial ants to create complete TSP routes which begin at the warehouse and end with a return to the warehouse after they visit all unvisited customers. The algorithm uses two main ideas: pheromone strength and visibility. Pheromone shows how much an edge has been used in successful routes while visibility indicates the distance to the next node. The system assigns greater visibility results to shorter edges.
 
-\section{Reinforcement learning}
+We assign identical pheromone levels to all edges at the beginning of our system. The complete graph $K$ serves as the foundation for ants who build their routes in every development cycle. The next customer selection process uses both the pheromone level and the travel distance measurement as its deciding factors. The algorithm uses ants to explore new paths while it increases the probability of selecting paths that have shorter lengths and higher pheromone concentrations.
+
+The study begins with all ants completing their paths and then pheromones are released to create new paths which will gradually lose their power. The system establishes pheromone deposits based on the distance of each route to calculate its total distance. The system calculates pheromone deposits for shorter routes using a formula which determines the quantity of pheromones to be deposited.
+
+\[
+    \Delta \tau = \frac{Q}{L}
+\]
+
+The pheromone deposit constant $Q$ and total route length $L$ establish the route reinforcement system which strengthens better routes through stronger reinforcement. The best route found across all iterations is returned as the final TSP solution for that truck cluster.
+
+Our code implements ACO through the use of parameters which include number of ants and iterations and alpha and beta and evaporation rate and pheromone deposit. The algorithm uses alpha to determine the significance of pheromone strength and beta to determine the significance of distance visibility. The algorithm demonstrates a stronger preference for nearby nodes when beta value increases. The algorithm functions as a selectable optimizer within PARS through its implementation of the \texttt{aco} option. The system uses saved shortest-path routing information to reconstruct the route after the optimizer determines the optimal path.
+
+\subsection{Genetic algorithm}
+
+The Genetic Algorithm (GA) serves as a metaheuristic approach which solves the TSP section of the routing problem. GA operates through a process that emulates biological evolution by allowing different solutions to develop through multiple generations. Our project defines each individual as a single route which begins at the warehouse, travels to every customer in a cluster one time, and returns to the warehouse.
+
+The algorithm starts with the generation of its first group which contains random routes that meet all valid route requirements. The system uses a fitness function to assess each route through its evaluation process. The fitness value for our situation measures the route distance because shorter routes provide better results. The system starts each new generation by arranging its population according to their route distances to choose the best routes as parents for the upcoming generation.
+
+New routes are created through crossover and mutation. Crossover combines parts of two parent routes. The first parent provides a route segment which the child receives and uses to complete customer delivery through the second parent order. The route remains valid because this system enables only one visit per customer. The system operates with a fixed chance of executing mutation which involves exchanging two customer positions throughout the route. The system introduces random elements which enable the algorithm to explore routes that exceed its current most effective paths.
+
+The GA algorithm executes its operations until it reaches its predetermined number of generations. The best route from the final population is returned as the solution. Our implementation uses a default population size of 80 together with 200 breeding cycles and 0.1 mutation probability. The algorithm operates within PARS through its integration with the \texttt{ga} function. The GA system operates on the complete graph $K$ which represents the chosen truck cluster while the final route extends into the complete road network.
+
+GA provides a flexible randomized search method which people can use for route optimization. Our implementation shows basic design features which require its performance to depend on three main factors. The three factors include the number of generations and population size and crossover quality and mutation rate.
+
+\subsection{Reinforcement learning}
 
 The project utilizes Gymnasium to construct the training environment and Stable-Baselines3 to implement the reinforcement learning algorithms. The environment is modeled as a graph where an adjacency matrix defines the connections and the "cost" (travel weight) between nodes.
 
-\paragraph{Reward architecture} The agent's objective is governed by a structured reward function designed to incentivize both task completion and path efficiency. This prevents the AI from wandering aimlessly:
+\subsubsection{Reward architecture}
+
+The agent's objective is governed by a structured reward function designed to incentivize both task completion and path efficiency. This prevents the AI from wandering aimlessly:
 
 \begin{itemize}
     \item Target Achievement (+20): Awarded for each required destination node successfully reached.
@@ -278,7 +277,9 @@ The project utilizes Gymnasium to construct the training environment and Stable-
     \item Efficiency Penalty (-Cost): A negative reward (the weight from the adjacency matrix) is applied at every turn to discourage redundant movement.
 \end{itemize}
 
-\paragraph{State--value function} This equation defines the "worth" of the agent's current situation. It calculates the total reward the AI expects to collect from its current turn until the very end of the trip.
+\subsubsection{State--value function}
+
+This equation defines the "worth" of the agent's current situation. It calculates the total reward the AI expects to collect from its current turn until the very end of the trip.
 \[
     V(s) = \mathbb{E} \left[ \sum_{k=0}^{K} \gamma^k R_{k} \right]
 \]
@@ -294,7 +295,9 @@ $\gamma^k$ (The Discount Factor): A "patience" multiplier. Rewards that happen m
 
 $R_k$ (The Reward): The specific points or cost penalties received during each specific turn.
 
-\paragraph{Bellman optimality equation} While the first equation tells the AI how good its current spot is, the Bellman Equation is the recursive logic it uses to make a decision. It looks one turn into the future to find the best possible move.
+\subsubsection{Bellman optimality equation}
+
+While the first equation tells the AI how good its current spot is, the Bellman Equation is the recursive logic it uses to make a decision. It looks one turn into the future to find the best possible move.
 \[
     V^*(s) = \max_{a \in A} \left[ R(s, a) + \gamma V^*(s') \right]
 \]
@@ -306,28 +309,55 @@ $R(s, a)$ (Immediate Feedback): The points or costs the AI gets immediately for 
 
 $\gamma V^*(s')$ (Future Estimate): The AI's estimate of how "good" the next node ($s'$) will be. Even if a move is expensive, the AI will take it if the next node has a very high future value.
 
+\section{Evaluation}
+
+To evaluate the performance of each TSP optimizer, we execute PARS on a $\qty{20}{\km}\times\qty{20}{\km}$ map centered at the University at Albany, SUNY. Specifically, we use the address 1400 Washington Ave, Albany, NY 12222. Note that this does not imply the warehouse is located at the university, just that the map is centered there.
+
+Each CVRP instance is generated by first randomly picking a central warehouse location $w\in V$ and then randomly sampling customer locations of the remaining vertices from the map, $C\subseteq V\setminus\{w\}$.
+
+Additionally, each instance features $|T|=4$ trucks, each with a maximum capacity of $k\in\{10,25,50,100\}$, and the number of customers $|C|\in[1,k|T|]$ is varied randomly over 200 iterations. PARS is then executed on each instance and the total distance traveled across all trucks is recorded for each instance. Observe that the different values for $k$ translate to the maximum TSP size of 10, 25, 50, and 100 customers per truck. This allows us to evaluate the performance of each TSP optimizer across different TSP sizes.
+
+The main metric we'll use to compare against is total distance traveled by all delivery trucks. For the classical AI algorithm this is simply the sum of all paths produced by each truck. A minimal total distance traveled is desirable.
+
+The performance of the AI will be evaluated by the total amount of points at the end. The points for reinforcement learning AI at the end will be compared to the algorithmic AI. This is to prevent situations where the AI is on a bad map but was punished for being in one when it has no choice over it. The algorithmic AI can be helpful in finding out how close or far reinforcement learning AI is to the algorithmic AI. Comparing the points between the reinforcement learning AI and algorithmic AI, more points for reinforcement learning AI mean better results as this would mean the AI has learned how to path the destinations well.
+
 \section{Data}
+
+The data shown in the figures below is the result of executing PARS on 200 randomly generated CVRP instances for each TSP size. Individual data points are hidden for visual clarity, however, raw data is available in the \texttt{data/} directory of the repository. The $y$-axis represents the total distance traveled across all trucks, while the $x$-axis represents the total customers given to that CVRP instance. Since each CVRP instance consists of 4 trucks, the maximum number of customers is 40, 100, 200, and 400 for TSP sizes of 10, 25, 50, and 100 respectively.
+
+Each chart contains a line for each TSP optimizer which represents the second-degree polynomial line of best fit for the total distance traveled across all trucks for that CVRP size.
+
+\begin{figure}[h]
+    \includegraphics[width=\linewidth]{../data/albany10/comparison.png}
+    \caption{Results from PARS executed over Albany, NY with a max. TSP size of 10 customers per truck.}
+\end{figure}
+
+\begin{figure}[h]
+    \includegraphics[width=\linewidth]{../data/albany25/comparison.png}
+    \caption{Results from PARS executed over Albany, NY with a max. TSP size of 25 customers per truck.}
+\end{figure}
+
+\begin{figure}[h]
+    \includegraphics[width=\linewidth]{../data/albany50/comparison.png}
+    \caption{Results from PARS executed over Albany, NY with a max. TSP size of 50 customers per truck.}
+\end{figure}
+
+\begin{figure}[h]
+    \includegraphics[width=\linewidth]{../data/albany100/comparison.png}
+    \caption{Results from PARS executed over Albany, NY with a max. TSP size of 100 customers per truck.}
+\end{figure}
 
 \section{Conclusion}
 
-For very small TSP sizes, all algorithms perform better than our baseline with most finding the likely optimal solution.
-However, as the TSP size is increased, we see a significance divergence.
+For very small TSP sizes, most algorithms perform better than our baseline with most finding the likely optimal solution. However, as the TSP size is increased, we see a significant divergence. Most notably, ACO performed significantly better than our NN baseline. This is likely because ACO is a more sophisticated algorithm that takes into account both the distance and the pheromone levels, which allows it to find better routes. On the other hand, we noted that once TSP size increased past approximately 10--15, SA, GA and RL performed worse than our NN baseline.
 
-ACO performed significantly better than our NN baseline.
+Our baseline, NN, performed relatively well across a broad spectrum of TSP sizes. One reason for this is that the TSP sizes we tested on were relatively small, with the largest being 100 customers. For larger TSP sizes, NN would likely perform much worse as it is a greedy algorithm that does not consider the overall route performance. On the other hand, we also think the map itself may have contributed to the good performance of NN. The map we used was a small, suburban area with a relatively uniform distribution of customers. In such a scenario, NN is more likely to perform well as the nearest neighbor is often a good choice. In contrast, if we were to test on a larger map with a more complex road network and a more clustered distribution of customers, we would likely see a significant drop in the performance of NN.
 
-SA and GA performed worse than our NN baseline.
+The randomized nature of SA and GA is likely the reason they performed so poorly on large TSP sizes. For instance, simulated annealing relies on a decay rate. Making the temperature decay happen slower might result in higher-quality solutions. However, we also recognize that our implementations of SA, GA, and RL are very primitive. Moving forward, many of our approaches would require further optimization to out-preform the baseline.
 
-We noted that once TSP size increased past approximately 10--15, SA and GA perform worse than NN.
+As for RL, we can conclude our findings didn't match that of \cite{Bello2017}. In hindsight, applying RL to VRP is challenging as the state space is very large and the reward structure is complex. The AI needs to learn not only how to find the shortest path but also how to manage multiple trucks and their capacities, which adds an additional layer of complexity. Moreover, the training process for RL can be time-consuming and computationally expensive, especially when dealing with larger maps and more customers. Additionally, our implementation of RL was quite basic, and we may not have tuned the hyperparameters effectively or provided enough training iterations for the model to learn effectively. In contrast,
 
-The randomized nature of SA and GA is likely the reason they performed so poorly on large TSP sizes.
-
-Our implementations of SA and GA are very primitive, and in-practice would require further optimization to out-preform the baseline.
-
-% \begin{figure*}[!t]
-%     \centering
-%     \includegraphics[width=\linewidth]{albany100/comparison.png}
-%     \caption{400 customers across 4 trucks with 100packages/truck(max. 100 customers/TSP)}
-% \end{figure*}
+All-in-all, while RL has shown promise in solving combinatorial optimization problems like TSP and VRP in some research, it is not a guaranteed solution and requires careful design and tuning to achieve good performance.
 
 \bibliographystyle{IEEEtran}
 \bibliography{paper}

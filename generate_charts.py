@@ -22,7 +22,21 @@ def polyfit(ax, x, y, degree: int=2, **kwargs):
     polynomial = np.poly1d(coefficients)
     x_line = np.linspace(min(x), max(x), 100)
     y_line = polynomial(x_line)
-    ax.plot(x_line, y_line, **kwargs)
+
+    # Calculate R^2 (coefficient of determination)
+    y_pred = polynomial(np.array(x))
+    ss_res = np.sum((np.array(y) - y_pred) ** 2)
+    ss_tot = np.sum((np.array(y) - np.mean(y)) ** 2)
+    r_squared = 1 - (ss_res / ss_tot)
+
+    if 'label' in kwargs:
+        label = f'{kwargs.get("label")} (R^2={r_squared:.4f})'
+        del kwargs['label']
+        ax.plot(x_line, y_line, label=label, **kwargs)
+    else:
+        ax.plot(x_line, y_line, label=f'R^2={r_squared:.4f}', **kwargs)
+
+    return r_squared
 
 
 def main():
@@ -39,7 +53,9 @@ def main():
     ax.set_xlabel('Customers')
     ax.set_ylabel('Total distance traveled (km)')
     ax.scatter(nn_customers, nn_distances)
-    polyfit(ax, nn_customers, nn_distances)
+    r2_nn = polyfit(ax, nn_customers, nn_distances)
+    print(f'NN R^2: {r2_nn:.4f}')
+    ax.legend()
     fig.savefig('data/img/nn.png')
 
     fig, ax = plt.subplots()
@@ -48,7 +64,9 @@ def main():
     ax.set_xlabel('Customers')
     ax.set_ylabel('Total distance traveled (km)')
     ax.scatter(sa_customers, sa_distances)
-    polyfit(ax, sa_customers, sa_distances)
+    r2_sa = polyfit(ax, sa_customers, sa_distances)
+    print(f'SA R^2: {r2_sa:.4f}')
+    ax.legend()
     fig.savefig('data/img/sa.png')
 
     fig, ax = plt.subplots()
@@ -57,7 +75,9 @@ def main():
     ax.set_xlabel('Customers')
     ax.set_ylabel('Total distance traveled (km)')
     ax.scatter(aco_customers, aco_distances)
-    polyfit(ax, aco_customers, aco_distances)
+    r2_aco = polyfit(ax, aco_customers, aco_distances)
+    print(f'ACO R^2: {r2_aco:.4f}')
+    ax.legend()
     fig.savefig('data/img/aco.png')
 
     fig, ax = plt.subplots()
@@ -66,7 +86,9 @@ def main():
     ax.set_xlabel('Customers')
     ax.set_ylabel('Total distance traveled (km)')
     ax.scatter(ga_customers, ga_distances)
-    polyfit(ax, ga_customers, ga_distances)
+    r2_ga = polyfit(ax, ga_customers, ga_distances)
+    print(f'GA R^2: {r2_ga:.4f}')
+    ax.legend()
     fig.savefig('data/img/ga.png')
 
     fig, ax = plt.subplots()
@@ -75,7 +97,9 @@ def main():
     ax.set_xlabel('Customers')
     ax.set_ylabel('Total distance traveled (km)')
     ax.scatter(rl_customers, rl_distances)
-    polyfit(ax, rl_customers, rl_distances)
+    r2_rl = polyfit(ax, rl_customers, rl_distances)
+    print(f'RL R^2: {r2_rl:.4f}')
+    ax.legend()
     fig.savefig('data/img/rl.png')
 
     fig, ax = plt.subplots()
@@ -83,11 +107,12 @@ def main():
     ax.set_title('Albany, NY')
     ax.set_xlabel('Customers')
     ax.set_ylabel('Total distance traveled (km)')
-    polyfit(ax, nn_customers, nn_distances, color='blue', label='NN')
-    polyfit(ax, sa_customers, sa_distances, color='red', label='SA')
-    polyfit(ax, aco_customers, aco_distances, color='orange', label='ACO')
-    polyfit(ax, ga_customers, ga_distances, color='purple', label='GA')
-    polyfit(ax, rl_customers, rl_distances, color='green', label='RL')
+    r2_nn_comp  = polyfit(ax, nn_customers, nn_distances, color='blue', label='NN')
+    r2_sa_comp  = polyfit(ax, sa_customers, sa_distances, color='red', label='SA')
+    r2_aco_comp = polyfit(ax, aco_customers, aco_distances, color='orange', label='ACO')
+    r2_ga_comp  = polyfit(ax, ga_customers, ga_distances, color='purple', label='GA')
+    r2_rl_comp  = polyfit(ax, rl_customers, rl_distances, color='green', label='RL')
+    print(f'Comparison - NN R^2: {r2_nn_comp:.4f}, SA R^2: {r2_sa_comp:.4f}, ACO R^2: {r2_aco_comp:.4f}, GA R^2: {r2_ga_comp:.4f}, RL R^2: {r2_rl_comp:.4f}')
     ax.legend()
     fig.savefig('data/img/comparison.png')
 

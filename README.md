@@ -26,3 +26,36 @@ An example output is shown below. Take note of the final number, this number is 
 ('address', 'distance', 'customers', 'trucks', 'truck_capacity', 'algorithm', 'total_distance')
 ('1400 Washington Ave, Albany, NY 12222', 10000, 32, 4, 8, 'nn', 288.44087676199723)
 ```
+
+For more information on arguments, run `python main.py -h`. The output is shown below.
+
+```txt
+usage: pars [-h] [--algorithm {nn,sa,aco,ga,rl}] [--distance DISTANCE] [--trucks TRUCKS] [--capacity CAPACITY] [--customers CUSTOMERS]
+            [--draw-route DRAW_ROUTE] [--write-route WRITE_ROUTE] [--write-stats WRITE_STATS] [--iterations ITERATIONS]
+            address
+
+Package assignment and routing system (PARS)
+
+positional arguments:
+  address               Reference address
+
+options:
+  -h, --help            show this help message and exit
+  --algorithm, -a {nn,sa,aco,ga,rl}
+                        TSP optimizer
+  --distance, -d DISTANCE
+                        Distance
+  --trucks, -t TRUCKS   Number of trucks
+  --capacity, -c CAPACITY
+                        Capacity of each truck
+  --customers, -C CUSTOMERS
+                        Total customers
+  --draw-route DRAW_ROUTE
+                        Draw the output route to the screen
+  --write-route WRITE_ROUTE
+                        Draw the output route to a file
+  --write-stats WRITE_STATS
+                        Write route statistics to a file
+  --iterations, -i ITERATIONS
+                        Number of iterations to perform
+```
